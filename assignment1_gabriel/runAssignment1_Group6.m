@@ -133,11 +133,36 @@ rng(4)
 M = 10000; % M = simulations for MC
 OptionPrice = EuropeanOptionAmericanBarrierKOMC(F0,K, KO,B,TTM,sigma,d,M);
 fprintf( "Option price for American barrier with MC : %.4f\n" ,OptionPrice )
-%% ii) delta
-rng(5)
-delta=AmericanBarrierDeltaKO(F0,K,KO,B,TTM,sigma,d,N);
-fprintf( "Delta for American barrier with MC : %.4f\n" ,delta)
+% %% ii) delta
+% rng(5)
+% delta=AmericanBarrierDeltaKO(F0,K,KO,B,TTM,sigma,d,N);
+% fprintf( "Delta for American barrier with MC : %.4f\n" ,delta)
 %% ii) vega
 rng(5)
 vega=AmericanBarrierVegaKO(F0,K,KO,B,TTM,sigma,d,N);
 fprintf( "Vega for American barrier with MC : %.4f\n" ,vega)
+
+%% QUESTION g)
+%% Antithetic Variables
+% plot Errors for MC varing number of simulations N 
+[nMC,stdEstim]=PlotErrorMC(F0,K,B,TTM,sigma);
+[nMC_ant,stdEstim_ant]=PlotErrorMC_ant(F0,K,B,TTM,sigma);
+% plot
+figure
+loglog(nMC, stdEstim, '-o', 'LineWidth', 1.25, 'MarkerSize', 6)
+hold on
+loglog(nMC_ant, stdEstim_ant, '-o', 'LineWidth', 1.25, 'MarkerSize', 6)
+hold off
+grid on
+xlabel('M')
+ylabel('stdEstim')
+title('ErrorMC vs ErrorMC antithetic')
+legend('MC','MC antithetic')
+
+%% QUESTION h) Bermudian option
+M=20000; % M = steps for CRR
+OptionPrice = BermudanOptionCRR(F0,K,B,TTM,sigma,M,flag);
+fprintf( "Option price for Bermudan barrier with CRR : %.4f\n" ,OptionPrice )
+
+
+
