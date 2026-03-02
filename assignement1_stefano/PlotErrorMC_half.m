@@ -3,14 +3,14 @@ function [M_half, stdEstim] = PlotErrorMC_half(F0, K, B, T, sigma)
     
     % --- Parameters ---
     flag = 1;             % Call option
-    m = 1:10;             % Let's simulate the half
+    m = 1:20;             % Let's simulate the half
     M_half = 2.^m;         % Simulations
     stdEstim = zeros(1, length(M_half)); 
     tol = 0.0001 * F0;    % 1 basis point tolerance
     
     % --- Monte Carlo Loop ---
     for i = 1:length(M_half)
-        rng(1); %let's fix the seed for explainability advantages
+        %rng(1); %let's fix the seed for explainability advantages
         % Generate random shocks and terminal prices
         Z_up = randn(M_half(i), 1);
         Z_down = -Z_up;

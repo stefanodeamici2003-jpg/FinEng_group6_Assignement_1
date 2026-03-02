@@ -6,12 +6,12 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     m = 1:20;             % Exponents from 1 to 20
     M_vec = 2.^m;         % Simulations: 2^1, 2^2, ..., 2^20
     stdEstim = zeros(1, length(M_vec)); 
-    tol = 0.0001 * F0;    % 1 basis point tolerance
+    bp = 1/2 * 0.0001;    % 1 basis point tolerance
     
     % --- Monte Carlo Loop ---
     for i = 1:length(M_vec)
         M = M_vec(i);
-        rng(1); %let's fix the seed for explainability advantages
+        %rng(3); %let's fix the seed for explainability advantages
         % Generate random shocks and terminal prices
         Z = randn(M, 1);
         ST = F0 * exp(-0.5 * sigma^2 * T + sigma * sqrt(T) * Z);
@@ -35,7 +35,7 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     loglog(M_vec, refLine, '--k', 'LineWidth', 1.5);
     
     % Add the tolerance line
-    yline(tol, '--r', '1 bp Tolerance');
+    yline(bp, '--r', '1 bp Tolerance');
     
     % Formatting
     title('Monte Carlo Convergence');
@@ -46,7 +46,7 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     
     % --- M Selection ---
     % Find first M below tolerance (ignoring zero results at start)
-    idx = find(stdEstim <= tol & stdEstim > 0, 1, 'first');
+    idx = find(stdEstim <= bp & stdEstim > 0, 1, 'first');
     
     fprintf('\n--- MC ANALYSIS ---\n');
     if ~isempty(idx)

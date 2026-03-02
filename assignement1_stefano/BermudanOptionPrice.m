@@ -41,6 +41,7 @@ for i = (M - 1):-1:0
         
         % Exercise when it's convenient
         V = max(V, Payoff);
+
     end
 end
 

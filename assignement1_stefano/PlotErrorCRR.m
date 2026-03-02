@@ -40,8 +40,8 @@ function [M, errorCRR] = PlotErrorCRR(F0, K, B, T, sigma)
     loglog(M, (errorCRR(10)*M(10))./M, '--k');
     
     % Tolerance line (1 bp of the Forward as per Hint 2)
-    tol = 0.0001 * F0;
-    yline(tol, '--r', '1 bp Bid/Ask Tolerance', 'LabelHorizontalAlignment', 'left');
+    bp =1/2 * 0.0001;
+    yline(bp, '--r', '1 bp Bid/Ask Tolerance', 'LabelHorizontalAlignment', 'left');
     
     % Formatting the plot
     title('CRR Tree Error Convergence');
@@ -51,12 +51,12 @@ function [M, errorCRR] = PlotErrorCRR(F0, K, B, T, sigma)
     grid on;
     
     % Console Output for M selection
-    valid_idx = find(errorCRR <= tol, 1);
+    valid_idx = find(errorCRR <= bp, 1);
     fprintf('\n--- CRR ERROR ANALYSIS ---\n');
     if ~isempty(valid_idx)
         fprintf('Criteria satisfied! Selected M: %d (2^%d)\n', M(valid_idx), m(valid_idx));
         fprintf('Error reached: %.6f\n', errorCRR(valid_idx));
     else
-        fprintf('Warning: 1 bp tolerance (%.4f) NOT reached within M = 1024.\n', tol);
+        fprintf('Warning: 1 bp tolerance (%.4f) NOT reached within M = 1024.\n', bp);
     end
 end
