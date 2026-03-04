@@ -36,11 +36,11 @@ function [M_half, stdEstim] = PlotErrorMC_half(F0, K, B, T, sigma)
     % We anchor it to the first point: Error(M) = Error(1) * sqrt(M1) / sqrt(M)
     refLine = stdEstim(10) * sqrt(M_half(10)) ./ sqrt(M_half);
     loglog(M_half, refLine, '--k', 'LineWidth', 1.5);
-    
+
     % Formatting
-    title('Monte Carlo Convergence');
+    title('ErrorMC VS ErrorMC Antithetic');
     xlabel('Number of Simulations (M)');
     ylabel('Standard Error');
-    legend('MC Standard Error', '1/sqrt(M) Reference', '1 bp Tolerance');
+    legend('MC Standard Error', '1/sqrt(M) Reference', '1/2 bp Tolerance', 'MC Antithetic error', 'Location', 'best');
     grid on;
     

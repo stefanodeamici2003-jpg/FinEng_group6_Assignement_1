@@ -38,7 +38,7 @@ OptionPrice = EuropeanOptionPrice(F0,K,B,TTM,sigma,pricingMode,M,flag)
 %non funziona molto bene sta cosa qui
 KO=1.4;
 Call_KO_True = EuropeanKOCall_ClosedFormula(F0, K, KO, B, TTM, sigma)
-M_CRR = 128;
+M_CRR = 2^10;
 Call_KO_CRR= EuropeanOptionKOCRR(F0, K, KO, B, TTM, sigma, M)
 M_MC = 2^20;
 Call_KO_MC=EuropeanOptionKOMC(F0,K,KO,B,TTM,sigma,M)
@@ -48,7 +48,7 @@ vega_exact = zeros(size(S0_vector));
 vega_num_crr = zeros(size(S0_vector));
 vega_num_mc = zeros(size(S0_vector));
 F0_vector = S0_vector .* exp(-d*TTM) ./ B;
-M_CRR = 2^10; %we increase the 
+M_CRR = 2^10; %we increase the number to get more precision
 for i = 1:length(S0_vector)
     % Update Forward price for each S0 in the range
     
@@ -59,16 +59,16 @@ end
 
 % Plotting results
 figure;
-plot(S0_vector, vega_exact, 'b-'); hold on;
-plot(S0_vector, vega_num_crr, 'r-'); hold on;
-plot(S0_vector, vega_num_mc, 'g-');
-xline(KO, 'k:', 'Barrier (1.4)'); % Barrier level 
+plot(S0_vector, vega_exact, 'b-o', 'LineWidth', 1.5, 'MarkerFaceColor', 'b', 'MarkerSize', 2); hold on;
+plot(S0_vector, vega_num_crr, 'r', 'LineWidth', 1.5); hold on;
+plot(S0_vector, vega_num_mc, 'g-', 'LineWidth', 1.5);
+
+xline(KO, '--k', 'Barrier (1.4)', 'LineWidth', 1.5, 'LabelHorizontalAlignment', 'left', 'LabelVerticalAlignment', 'bottom');   % Barrier level 
 xlabel('Underlying Price S0 (Euro)');
 ylabel('Vega (Euro)');
 title('Vega of Up-and-Out European Call');
 legend('Exact (Analytical)', 'Numerical (CRR)', 'Numerical (MC)');
 grid on;
-
 %% American Barrier F
 figure();
 S0_vector = 0.65:0.001:1.45; % Range of underlying prices 
@@ -86,12 +86,17 @@ for i=1:length(F0_vector)
     American_delta(i) = DeltaAmericanKO(F0_vector(i), K, KO, B, TTM, sigma, d);
 end
 
-title('Delta Eur VS American Barrier');
-plot(S0_vector, Eur_delta, "Marker","+");
+figure;
+plot(S0_vector, Eur_delta, '-', 'LineWidth', 1.5); 
 hold on
-plot(S0_vector, American_delta, "Marker","+");
-title('Delta Eur VS American Barrier');
-legend('Delta Eur', 'Delta American');
+plot(S0_vector, American_delta, '-', 'LineWidth', 1.5);
+
+% Formattazione
+title('Delta European VS American Barrier');
+xlabel('Underlying Price S0 (Euro)');
+ylabel('Delta');
+legend('Delta European', 'Delta American', 'Location', 'best');
+grid on;
 
 %%
 % Analyze Vega
@@ -103,12 +108,14 @@ for i=1:length(F0_vector)
     American_vega(i) = VegaAmericanKO(F0_vector(i), K, KO, B, TTM, sigma, d);
 end
 
-title('Vega Eur VS American Barrier');
-plot(S0_vector, Eur_vega);
+plot(S0_vector, Eur_vega, '-', 'LineWidth', 1.5);
 hold on
-plot(S0_vector, American_vega);
-title('Vega Eur VS American Barrier');
-legend('Vega Eur', 'Vega American');
+plot(S0_vector, American_vega, '-', 'LineWidth', 1.5);
+title('Vega European VS American Barrier');
+xlabel('Underlying Price S0 (Euro)');
+ylabel('Vega');
+legend('Vega European', 'Vega American');
+grid on;
 
 %% Antithetic Variables
 [M_vec, stdEstim] = PlotErrorMC(F0, K, B, TTM, sigma);

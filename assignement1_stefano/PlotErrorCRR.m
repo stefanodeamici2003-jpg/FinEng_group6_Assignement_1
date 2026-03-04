@@ -37,17 +37,17 @@ function [M, errorCRR] = PlotErrorCRR(F0, K, B, T, sigma)
     hold on;
 
     % Add reference line for O(1/M) convergence
-    loglog(M, (errorCRR(10)*M(10))./M, '--k');
+    loglog(M, (errorCRR(10)*M(10))./M, '--k', 'LineWidth', 1.5);
     
     % Tolerance line (1 bp of the Forward as per Hint 2)
     bp =1/2 * 0.0001;
-    yline(bp, '--r', '1 bp Bid/Ask Tolerance', 'LabelHorizontalAlignment', 'left');
+    yline(bp, '--r', '1/2 bp Tolerance', 'LabelHorizontalAlignment', 'left');
     
     % Formatting the plot
     title('CRR Tree Error Convergence');
     xlabel('Number of Steps (M)');
     ylabel('Absolute Error');
-    legend('CRR Error', 'O(1/M) Reference', '1 bp Tolerance');
+    legend('CRR Error', 'O(1/M) Reference', '1/2 bp Tolerance');
     grid on;
     
     % Console Output for M selection

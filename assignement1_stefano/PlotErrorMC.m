@@ -26,7 +26,7 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     % --- Visualization ---
     figure;
     % Plot the calculated Standard Error
-    loglog(M_vec, stdEstim, '-s', 'LineWidth', 1.2);
+    loglog(M_vec, stdEstim, '-o', 'LineWidth', 1.5, 'MarkerFaceColor', 'b');
     hold on;
     
     % Add the 1/sqrt(M) reference line
@@ -35,13 +35,13 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     loglog(M_vec, refLine, '--k', 'LineWidth', 1.5);
     
     % Add the tolerance line
-    yline(bp, '--r', '1 bp Tolerance');
+    yline(bp, '--r', '1/2 bp Tolerance');
     
     % Formatting
     title('Monte Carlo Convergence');
     xlabel('Number of Simulations (M)');
     ylabel('Standard Error');
-    legend('MC Standard Error', '1/sqrt(M) Reference', '1 bp Tolerance');
+    legend('MC Standard Error', '1/sqrt(M) Reference');
     grid on;
     
     % --- M Selection ---
