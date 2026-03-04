@@ -64,7 +64,7 @@ plot(S0_vector, vega_num_crr, 'r-'); hold on;
 plot(S0_vector, vega_num_mc, 'g-');
 xline(KO, 'k:', 'Barrier (1.4)'); % Barrier level 
 xlabel('Underlying Price S0 (Euro)');
-ylabel('Vega');
+ylabel('Vega (Euro)');
 title('Vega of Up-and-Out European Call');
 legend('Exact (Analytical)', 'Numerical (CRR)', 'Numerical (MC)');
 grid on;
@@ -117,20 +117,29 @@ hold on
 
 
 %% Bermudan H
-d=0.15;
-Bermudan = BermudanOptionPrice(F0, K, TTM, sigma, B, 0.15, M);
+d=0.02;
+Bermudan = BermudanOptionPrice(F0, K, TTM, sigma, B, d, M)
 %% Bermudan VS European I
-q_vector = [0 : 0.001 : 0.05];
+figure();
+q_vector = linspace(0, 0.05, 100);
+
+% Pre-allochiamo i vettori per questioni di performance in Matlab
+Bermudan_vector = zeros(1, length(q_vector));
+European_vector = zeros(1, length(q_vector));
 
 for i=1:length(q_vector)
-    Bermudan_vector(i) = BermudanOptionPrice(F0, K, TTM, sigma, B, q_vector(i), M);
-    B_european=B*exp(q_vector(i)*TTM);
-    European_vector(i) =  EuropeanOptionClosed(F0,K,B_european,TTM,sigma,1);
+    % RICALCOLO F0: varia al variare del dividendo q!
+    % F0 = S0 * exp((r - q) * TTM) = S0 * exp(-q * TTM) / B
+    F0_current = S0 * exp(-q_vector(i) * TTM) / B;
+    
+    % Passiamo l'F0 aggiornato ad entrambe le funzioni!
+    Bermudan_vector(i) = BermudanOptionPrice(F0_current, K, TTM, B, sigma, q_vector(i), M);
+    European_vector(i) = EuropeanOptionClosed(F0_current, K, B, TTM, sigma, 1);
 end
-
 plot(q_vector, Bermudan_vector);
 hold on
 plot(q_vector, European_vector);
+
 
 
 
