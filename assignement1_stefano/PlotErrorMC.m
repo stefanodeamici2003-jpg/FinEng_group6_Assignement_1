@@ -44,14 +44,4 @@ function [M_vec, stdEstim] = PlotErrorMC(F0, K, B, T, sigma)
     legend('MC Standard Error', '1/sqrt(M) Reference');
     grid on;
     
-    % --- M Selection ---
-    % Find first M below tolerance (ignoring zero results at start)
-    idx = find(stdEstim <= bp & stdEstim > 0, 1, 'first');
-    
-    fprintf('\n--- MC ANALYSIS ---\n');
-    if ~isempty(idx)
-        fprintf('Tolerance reached at M = 2^%d (%d)\n', m(idx), M_vec(idx));
-    else
-        fprintf('Tolerance not reached within M = 2^20\n');
-    end
 end

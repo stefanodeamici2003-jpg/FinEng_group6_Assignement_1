@@ -49,14 +49,5 @@ function [M, errorCRR] = PlotErrorCRR(F0, K, B, T, sigma)
     ylabel('Absolute Error');
     legend('CRR Error', 'O(1/M) Reference', '1/2 bp Tolerance');
     grid on;
-    
-    % Console Output for M selection
-    valid_idx = find(errorCRR <= bp, 1);
-    fprintf('\n--- CRR ERROR ANALYSIS ---\n');
-    if ~isempty(valid_idx)
-        fprintf('Criteria satisfied! Selected M: %d (2^%d)\n', M(valid_idx), m(valid_idx));
-        fprintf('Error reached: %.6f\n', errorCRR(valid_idx));
-    else
-        fprintf('Warning: 1 bp tolerance (%.4f) NOT reached within M = 1024.\n', bp);
-    end
+
 end
