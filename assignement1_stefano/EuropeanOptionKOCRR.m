@@ -1,4 +1,7 @@
 function optionPrice = EuropeanOptionKOCRR(F0, K, KO, B, T, sigma, N)
+% EuropeanOptionKOCRRcomputes the price of an U&O european barrier call
+% option with CRR approach
+
 % INPUT:
 % F0:    forward price
 % K:     strike

@@ -1,5 +1,6 @@
 function optionPrice=EuropeanOptionKOMC(F0,K,KO,B,T,sigma,N)
-% Option Price with different pricing methods
+% EuropeanOptionKOCRRcomputes the price of an U&O european barrier call
+% option with MC simulation
 %
 % INPUT:
 % F0:    forward price

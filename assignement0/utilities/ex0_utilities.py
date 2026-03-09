@@ -179,8 +179,6 @@ def bootstrap(
     # we don't consider the first swap since we already have futures (more liquid) to cover this date
     for idx, swapDate in enumerate(swaps.iloc[1:, :].index):
             rate, yf = swapRates[idx], year_frac_30e_360(swap_old, swapDate)
-            print('rate', rate)
-            print('yf', swap_old, swapDate, yf)
             swapYearFrac.append(yf)
             df = (1 - rate/100*BPV_1) / (1 + rate/100*yf)
             termDates.append(swapDate)
@@ -194,6 +192,4 @@ def bootstrap(
     #print('discount_factors', discount_factors)
     zero = from_discount_factors_to_zero_rates(discount_factors.index, discount_factors.values)
     zero_rates = pd.Series(index=termDates[1:], data=zero)
-    #print('zero', zero)
-    #print('zero_rates', zero_rates)
     return discount_factors, zero_rates

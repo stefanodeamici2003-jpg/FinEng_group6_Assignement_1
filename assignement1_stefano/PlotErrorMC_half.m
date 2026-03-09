@@ -1,14 +1,21 @@
 function [M_half, stdEstim] = PlotErrorMC_half(F0, K, B, T, sigma)
     % PLOTERRORMC Computes and plots the Monte Carlo standard error decay.
     
-    % --- Parameters ---
+    % INPUT:
+    % F0:    forward price
+    % K:     strike
+    % B:     discount factor
+    % T:     time-to-maturity
+    % sigma: volatility
+    
+    % Parameters
     flag = 1;             % Call option
     m = 1:20;             % Let's simulate the half
     M_half = 2.^m;         % Simulations
     stdEstim = zeros(1, length(M_half)); 
     tol = 0.0001 * F0;    % 1 basis point tolerance
     
-    % --- Monte Carlo Loop ---
+    % Monte Carlo Loop
     for i = 1:length(M_half)
         %rng(1); %let's fix the seed for explainability advantages
         % Generate random shocks and terminal prices
@@ -27,7 +34,7 @@ function [M_half, stdEstim] = PlotErrorMC_half(F0, K, B, T, sigma)
         stdEstim(i) = std(payoffs) / sqrt(M_half(i)); 
     end
     
-    % --- Visualization ---
+    % Visualization
     % Plot the calculated Standard Error
     loglog(M_half, stdEstim, '-s', 'LineWidth', 1.2);
     hold on;
@@ -43,4 +50,4 @@ function [M_half, stdEstim] = PlotErrorMC_half(F0, K, B, T, sigma)
     ylabel('Standard Error');
     legend('MC Standard Error', '1/sqrt(M) Reference', '1/2 bp Tolerance', 'MC Antithetic error', 'Location', 'best');
     grid on;
-    
+end
