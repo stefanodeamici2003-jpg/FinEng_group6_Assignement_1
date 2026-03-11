@@ -1,0 +1,113 @@
+function [datesCDS, survProbs, intensities] = bootstrapCDS(datesDF, discounts, datesCDS, spreadsCDS, flag, recovery)
+% BOOTSTRAPCDS  Bootstrapping della curva di sopravvivenza da spread CDS.
+%
+%   INPUT:
+%     datesDF    - date della curva risk-free (da bootstrap tassi)
+%     discounts  - discount factors corrispondenti
+%     datesCDS   - scadenze dei CDS (vettore colonna)
+%     spreadsCDS - spread CDS di mercato in decimale (es. 0.0060 = 60 bps)
+%     flag       - 1: Approssimato  |  2: Esatto (con accrual)  |  3: Jarrow-Turnbull
+%     recovery   - tasso di recupero (es. 0.40)
+%
+%   OUTPUT:
+%     datesCDS   - invariato (pass-through)
+%     survProbs  - probabilità di sopravvivenza Q(t0, t_a)
+%     intensities- intensità di default forward lambda(t_{a-1}, t_a)
+
+% =========================================================================
+% 0. SETUP
+% =========================================================================
+RR = recovery;        % Recovery Rate  (evita di sovrascrivere pi = 3.14159)
+LGD = 1 - RR;         % Loss Given Default
+t0  = datesDF(1);     % Settlement date
+
+% Rates interpolati linearmente sulle date CDS
+df_cds = zeros(length(datesCDS),1);
+for i = 1:length(datesCDS)
+    df_cds(i) = linearRateInterp(datesDF, discounts, t0, datesCDS(i));
+end
+
+N           = length(datesCDS);
+survProbs   = zeros(N, 1);
+intensities = zeros(N, 1);
+
+% =========================================================================
+% 1. BOOTSTRAP RICORSIVO
+% =========================================================================
+P_prev = 1.0;   % Q(t0, t0) = 1 per definizione
+t_prev = t0;
+
+% Accumulatori per Premium Leg e Default Leg (somme sui nodi 1..a-1)
+PremiumLeg  = 0;
+DefaultLeg  = 0;   % usato da flag 1 e 2 (formula diversa per ognuno)
+
+for T = 1:N
+
+    S   = spreadsCDS(T);    % Fixed leg
+    t   = datesCDS(T);      % Dates of different CDS
+    df_T  = df_cds(T);      % Discount Factors in CDS Dates
+
+    tau = yearfrac(t_prev, t, 2);   % ACT/360 — durata periodo premio
+    dt  = yearfrac(t_prev, t, 3);   % ACT/365 — durata per intensità
+
+    % -----------------------------------------------------------------
+    switch flag
+
+        case 1  % ── Approssimato (No Accrual) ─────────────────────────
+            %
+            % Fair value:  S * PremLeg = LGD * DefLeg
+            % DefLeg  = sum_{j=1}^{a} B_j * (P_{j-1} - P_j)   (no accrual)
+            % PremLeg = sum_{j=1}^{a} tau_j * B_j * P_j
+            %
+            % Isolando P_a:
+            num = LGD * (DefaultLeg + df_T * P_prev) - S * PremiumLeg;
+            den = df_T * (S * tau + LGD);
+            P = num / den;
+
+        case 2  % ── Esatto (Con Accrual) ──────────────────────────────
+            %
+            % Si aggiunge 0.5*S*tau come rateo medio in caso di default
+            % a metà periodo.
+            %
+            % Isolando P_a:
+            num = (LGD - 0.5*S*tau) * df_T * P_prev + LGD * DefaultLeg - S * PremiumLeg;
+            den = df_T * (LGD + 0.5*S*tau);
+            P = num / den;
+
+        case 3  % ── Jarrow-Turnbull ────────────────────────────────────
+            %
+            % Intensità costante per scadenza: lambda = S / LGD
+            % Sopravvivenza: P(t) = exp(-lambda * T)
+            %
+            lambda_JT = S / LGD;
+            T_a       = yearfrac(t0, t, 3);   % ACT/365 da settlement
+            P       = exp(-lambda_JT * T_a);
+
+        otherwise
+            error('bootstrapCDS: flag non valido. Usa 1, 2 o 3.');
+    end
+    % -----------------------------------------------------------------
+
+    if P <= 0 || P > P_prev
+        warning('bootstrapCDS:invalidSurvProb','Nodo %d: probabilità di sopravvivenza non valida (%.4f). Verifica gli spread.', T, P);
+    end
+
+    % Intensities:  lambda = -log(P_a)/dt - lambda_prev * t_prev/dt
+    intensities(T) = -log(P/P_prev) / dt;
+    survProbs(T)   = P;
+
+    % Aggiorna accumulatori (solo flag 1 e 2)
+    if flag == 1 || flag == 2
+        PremiumLeg = PremiumLeg + tau * df_T * P;
+        DefaultLeg = DefaultLeg + df_T * (P_prev - P);
+        % NOTA: il fattore LGD è costante e può essere portato fuori —
+        % qui lo includiamo per simmetria con la formula del numeratore.
+        % Se preferisci tenerlo fuori, togli LGD qui e aggiungilo in num.
+    end
+
+    % Aggiorna per il prossimo periodo
+    P_prev = P;
+    t_prev = t;
+end
+
+end

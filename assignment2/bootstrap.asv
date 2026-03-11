@@ -90,7 +90,7 @@ lastFutEnd = datesSet.futures(nFut, 2);  % end date del 7° futures
 
 for i = 1:nSwaps
     if datesSet.swaps(i) <= lastFutEnd
-        continue   % zona già coperta dai futures
+        %continue   % zona già coperta dai futures
     end
     T_n = datesSet.swaps(i);
     K   = midSwaps(i);
@@ -113,7 +113,7 @@ for i = 1:nSwaps
     prevDate = settlementDate;
     for j = 1:nYears - 1
         delta_j = yearfrac(prevDate, fixedDates(j), 6);   % 30/360 EU
-        B_j     = linearRateInterp(dates, discounts, settlementDate, prevDate);
+        B_j     = linearRateInterp(dates, iscounts, settlementDate, t);
         BPV     = BPV + delta_j * B_j;
         prevDate = fixedDates(j);
     end
@@ -143,6 +143,26 @@ end % bootstrap
 %% =======================================================================
 %  LOCAL HELPER FUNCTIONS
 %  =======================================================================
+
+function B = linearRateInterp(knownDates, knownDiscounts, settlementDate, t)
+%LINEARRATEINTERP  Linear interpolation on zero rates, then back to DFs.
+%   B(t) = exp( -r(t) * tau(t) )
+%   where r(t) is linearly interpolated between known zero rates.
+
+% Year fractions from settlement (Act/365 or whatever convention you use)
+tau_known = (knownDates - settlementDate) / 365;
+tau_t     = (t - settlementDate) / 365;
+
+% Zero rates from known discount factors
+r_known = -log(knownDiscounts) ./ tau_known;
+
+% Linear interpolation (flat extrapolation) on rates
+r_t = interp1(tau_known, r_known, tau_t, 'linear', 'extrap');
+
+% Back to discount factors
+B = exp(-r_t .* tau_t);
+
+end
 
 function [datesOut, discountsOut] = insertPoint(dates, discounts, t, B)
 %INSERTPOINT  Insert or overwrite a point in the (sorted) curve.

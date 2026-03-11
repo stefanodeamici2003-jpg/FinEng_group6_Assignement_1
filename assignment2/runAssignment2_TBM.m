@@ -43,3 +43,12 @@ datetick('x', 'yyyy');   % <-- questa riga risolve il problema
 grid on;
 legend({'discounts', 'zero rates'}, 'Location', 'northeast');
 title('IR Curve - 15 Feb 2008');
+
+%% Exercise 6
+% Making use of the curve found in Es.1 find the NPV of a cash flow recived
+% on the 19th of each month with an Average Annual Growth Rate of 5%
+% applied in March of each year
+initial_amount = 6 *10^3;
+NPV = discounted_cash_flow(dates, discounts, initial_amount)
+NPv = calc_NPV_Ex6(dates, discounts);
+testo_leggibile = datestr(dates, 'dd/mm/yyyy')
