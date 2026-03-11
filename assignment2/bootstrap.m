@@ -30,7 +30,7 @@ function [dates, discounts, zeroRates] = bootstrap(datesSet, ratesSet)
 %% -----------------------------------------------------------------------
 %  0.  Setup
 %  -----------------------------------------------------------------------
-settlementDate = datesSet.settlementDate;
+settlementDate = datesSet.settlement;
 
 % Mid-market rates (average of bid and ask)
 midDepos   = mean(ratesSet.depos,   2);   % Nd x 1
@@ -68,8 +68,8 @@ for i = 1:nFut
     T1    = datesSet.futures(i, 1);              % period start (IMM date)
     T2    = datesSet.futures(i, 2);              % period end
     delta = (T2 - T1) / 360;                     % Act/360
-
-    B_T1 = logLinearInterp(dates, discounts, T1); %
+    
+    B_T1 = linearRateInterp(dates, discounts, settlementDate, T1); %
     B_T2 = B_T1 / (1.0 + midFutures(i) * delta);
     [dates, discounts] = insertPoint(dates, discounts, T2, B_T2);
 end
@@ -90,7 +90,7 @@ lastFutEnd = datesSet.futures(nFut, 2);  % end date del 7° futures
 
 for i = 1:nSwaps
     if datesSet.swaps(i) <= lastFutEnd
-        %continue   % zona già coperta dai futures
+        continue   % zona già coperta dai futures
     end
     T_n = datesSet.swaps(i);
     K   = midSwaps(i);
@@ -113,7 +113,7 @@ for i = 1:nSwaps
     prevDate = settlementDate;
     for j = 1:nYears - 1
         delta_j = yearfrac(prevDate, fixedDates(j), 6);   % 30/360 EU
-        B_j     = logLinearInterp(dates, discounts, fixedDates(j));
+        B_j     = linearRateInterp(dates, discounts, settlementDate, prevDate);
         BPV     = BPV + delta_j * B_j;
         prevDate = fixedDates(j);
     end
@@ -144,13 +144,25 @@ end % bootstrap
 %  LOCAL HELPER FUNCTIONS
 %  =======================================================================
 
-function B = logLinearInterp(knownDates, knownDiscounts, t)
-%LOGLINEARINTERP  Log-linear interpolation / flat extrapolation of DFs.
-%   B(t) = exp( linear_interp( ln(B), t ) )
-logB = interp1(knownDates, log(knownDiscounts), t, 'linear', 'extrap'); % with del log we assume constant forward rate
-B    = exp(logB);
-end % logLinearInterp
+function B = linearRateInterp(knownDates, knownDiscounts, settlementDate, t)
+% Builds zero rates from the known curve (excluding settlement where B=1),
+% linearly interpolates, flat-extrapolates, then converts back to DF.
 
+% Exclude settlement (B = 1  =>  log(1)/0 = 0/0)
+valid     = knownDiscounts < 1 - 1e-14;
+kDates    = knownDates(valid);
+kDisc     = knownDiscounts(valid);
+
+tau_known = (kDates - settlementDate) / 365;
+tau_t     = (t      - settlementDate) / 365;
+
+r_known = -log(kDisc) ./ tau_known;
+
+% Linear interpolation, flat extrapolation beyond last knot
+r_t = interp1(tau_known, r_known, tau_t, 'linear', 'extrap');
+
+B = exp(-r_t .* tau_t);
+end % linearRateInterp
 
 function [datesOut, discountsOut] = insertPoint(dates, discounts, t, B)
 %INSERTPOINT  Insert or overwrite a point in the (sorted) curve.
