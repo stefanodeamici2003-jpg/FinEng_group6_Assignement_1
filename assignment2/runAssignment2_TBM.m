@@ -17,7 +17,7 @@ formatData='dd/mm/yyyy'; %Pay attention to your computer settings
 %% Read market data
 % This fuction works on Windows OS. Pay attention on other OS.
 
-[datesSet, ratesSet] = readExcelData('MktData_CurveBootstrap.xls', formatData);
+[datesSet, ratesSet] = readExcelDataOS('MktData_CurveBootstrap.xls', formatData);
 
 %% Bootstrap
 % dates includes SettlementDate as first date
