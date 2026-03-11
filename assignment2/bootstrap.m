@@ -30,7 +30,7 @@ function [dates, discounts, zeroRates] = bootstrap(datesSet, ratesSet)
 %% -----------------------------------------------------------------------
 %  0.  Setup
 %  -----------------------------------------------------------------------
-settlementDate = datesSet.settlement;
+settlementDate = datesSet.settlementDate;
 
 % Mid-market rates (average of bid and ask)
 midDepos   = mean(ratesSet.depos,   2);   % Nd x 1
@@ -69,7 +69,7 @@ for i = 1:nFut
     T2    = datesSet.futures(i, 2);              % period end
     delta = (T2 - T1) / 360;                     % Act/360
 
-    B_T1 = logLinearInterp(dates, discounts, T1);
+    B_T1 = logLinearInterp(dates, discounts, T1); %
     B_T2 = B_T1 / (1.0 + midFutures(i) * delta);
     [dates, discounts] = insertPoint(dates, discounts, T2, B_T2);
 end
@@ -90,14 +90,14 @@ lastFutEnd = datesSet.futures(nFut, 2);  % end date del 7° futures
 
 for i = 1:nSwaps
     if datesSet.swaps(i) <= lastFutEnd
-        continue   % zona già coperta dai futures
+        %continue   % zona già coperta dai futures
     end
     T_n = datesSet.swaps(i);
     K   = midSwaps(i);
 
     % Number of annual coupon periods
-    nYears = round((T_n - settlementDate) / 365.25);
-    if nYears < 1
+    nYears = year(T_n) - year(settlementDate);
+    if nYears < 1 % maybe redundant
         continue
     end
 
@@ -117,7 +117,7 @@ for i = 1:nSwaps
         BPV     = BPV + delta_j * B_j;
         prevDate = fixedDates(j);
     end
-
+disp(BPV)
     % --- Bootstrap last discount factor ----------------------------------
     delta_n = yearfrac(prevDate, T_n, 6);                 % 30/360 EU
     B_Tn    = (1.0 - K * BPV) / (1.0 + K * delta_n);
@@ -126,7 +126,7 @@ for i = 1:nSwaps
 end
 
 %% -----------------------------------------------------------------------
-%  4.  Zero rates  –  Act/365, continuously compounded
+%  4. From Discount Factors to Zero rates  –  Act/365, continuously compounded
 %       r(T) = -ln(B(t0,T)) / ((T - t0)/365)
 %  -----------------------------------------------------------------------
 T_ACT365  = (dates - settlementDate) / 365;
@@ -147,7 +147,7 @@ end % bootstrap
 function B = logLinearInterp(knownDates, knownDiscounts, t)
 %LOGLINEARINTERP  Log-linear interpolation / flat extrapolation of DFs.
 %   B(t) = exp( linear_interp( ln(B), t ) )
-logB = interp1(knownDates, log(knownDiscounts), t, 'linear', 'extrap');
+logB = interp1(knownDates, log(knownDiscounts), t, 'linear', 'extrap'); % with del log we assume constant forward rate
 B    = exp(logB);
 end % logLinearInterp
 
@@ -166,4 +166,4 @@ else
     discountsOut        = discounts;
     discountsOut(idx)   = B;
 end
-end % insertPoint
+end % insertPointend
