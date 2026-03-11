@@ -55,27 +55,14 @@ plot(dates, y, 'b-', 'LineWidth', 1.5); % Disegna la linea blu della spline
 hold on;
 plot(datesCDS, spreadsCDS, 'ro', 'MarkerSize', 7, 'LineWidth', 1.5); % Disegna i cerchi rossi sui dati originali
 
-% Point B: Piecewise constant Intensity Coefficient negliecting Accrual term
+%Point B: Piecewise constant Intensity Coefficient negliecting Accrual term
 flag = 1;
 recovery = 0.4;
-[datesCDS, survProbs, intensities] = bootstrapCDS(dates, discounts, datesCDS, spreadsCDS, flag, recovery);
+[datesCDS, survProbs, intensities] = bootstrapCDS(dates, discounts, datesCDS, spreadsCDS, flag, recovery)
 Res = table(datestr(datesCDS, 'dd/mm/yyyy'), survProbs, intensities, ...
                   'VariableNames', {'Data_Scadenza', 'Surv_Prob', 'Lambda'});
-disp('===================WITHOUT ACCRUAL==================');
-disp(Res);
-% Considering Accrual
-flag = 2;
-[datesCDS, survProbs, intensities] = bootstrapCDS(dates, discounts, datesCDS, spreadsCDS, flag, recovery);
-Res = table(datestr(datesCDS, 'dd/mm/yyyy'), survProbs, intensities, ...
-                  'VariableNames', {'Data_Scadenza', 'Surv_Prob', 'Lambda'});
-disp('===================WITH ACCRUAL==================');
-disp(Res);
-% Jarrow-Turnbull approximation
-flag = 3;
-[datesCDS, survProbs, intensities] = bootstrapCDS(dates, discounts, datesCDS, spreadsCDS, flag, recovery);
-Res = table(datestr(datesCDS, 'dd/mm/yyyy'), survProbs, intensities, ...
-                  'VariableNames', {'Data_Scadenza', 'Surv_Prob', 'Lambda'});
-disp('==================Jarrow-Turnbull===================');
+
+% La stampi a schermo
 disp(Res);
 %% Exercise 6
 % Making use of the curve found in Es.1 find the NPV of a cash flow recived
