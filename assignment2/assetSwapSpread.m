@@ -1,4 +1,4 @@
-function s_asw = assetSwapSpread(datesDF, discounts, settlementDate, issueDate, maturityDate, cleanPrice, coupon)
+function [s_asw, couponDates] = assetSwapSpread(datesDF, discounts, settlementDate, issueDate, maturityDate, cleanPrice, coupon)
 % ASSETSWAPSPREAD  Par Asset Swap Spread over Euribor 3M.
 %
 %   Formula: s_asw = ( C(0) - C_bar(0) ) / BPV_float
@@ -50,7 +50,7 @@ futureDates = couponDates(couponDates > settlementDate);
 AC    = coupon * yearfrac(lastCoupon, settlementDate, 0);  % ACT/ACT
 C_bar = cleanPrice + AC;
 
-%   Rissk free price: C(0)
+%   Risk free price: C(0)
 %
 %   C(0) = sum_{i=1}^{N} coupon * delta_i * B(t0, ti)  +  B(t0, tN)
 %   delta_i = yearfrac(t_{i-1}, t_i)   ACT/ACT
@@ -59,13 +59,14 @@ C_bar = cleanPrice + AC;
 periodStarts = [lastCoupon; futureDates(1:end-1)];
 
 C0 = 0;
+% Calculation of coupons price
 for i = 1:length(futureDates)
-    delta_i = yearfrac(periodStarts(i), futureDates(i), 0);   % ACT/ACT
+    delta_i = yearfrac(periodStarts(i), futureDates(i), 3);   % ACT/365
     df_i  = linearRateInterp(datesDF, discounts, settlementDate, futureDates(i)); %B(t0, ti)
     C0    = C0 + coupon * delta_i * df_i;
 end
 
-% Add principal repayment at maturity
+% Add principal payment at maturity
 df_N = linearRateInterp(datesDF, discounts, settlementDate, maturityDate);
 C0   = C0 + df_N;
 

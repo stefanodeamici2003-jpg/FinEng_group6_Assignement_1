@@ -117,7 +117,6 @@ for i = 1:nSwaps
         BPV     = BPV + delta_j * B_j;
         prevDate = fixedDates(j);
     end
-disp(BPV)
     % --- Bootstrap last discount factor ----------------------------------
     delta_n = yearfrac(prevDate, T_n, 6);                 % 30/360 EU
     B_Tn    = (1.0 - K * BPV) / (1.0 + K * delta_n);

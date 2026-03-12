@@ -1,6 +1,6 @@
 function [datesCDS, spreadsCDS] = construct_dataset_ES_4()
 % The function constructs the dataset given by the Assignment
-
+% We are missing the 6-th year!
 settlementDate = datenum('19-Feb-2008');
 
 % =========================================================================

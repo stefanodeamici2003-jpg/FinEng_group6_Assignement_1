@@ -110,4 +110,16 @@ for T = 1:N
     t_prev = t;
 end
 
+Res = table(datestr(datesCDS, 'dd/mm/yyyy'), survProbs, intensities, ...
+                  'VariableNames', {'Data_Scadenza', 'Surv_Prob', 'Lambda'});
+if flag == 1
+    disp('===================WITHOUT ACCRUAL==================');
+end
+if flag == 2
+    disp('===================WITH ACCRUAL==================');
+end
+if flag == 3
+    disp('==================Jarrow-Turnbull===================');
+end
+disp(Res);
 end

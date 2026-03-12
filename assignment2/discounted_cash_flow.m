@@ -15,7 +15,6 @@ for y = 0:(Y-1)
     end
     CF = CF * (1+AAGR);
 end
-
 % Calculate the right points in time
 SettlementDate = dates(1);
 FluxDates = zeros (M*Y, 1);
