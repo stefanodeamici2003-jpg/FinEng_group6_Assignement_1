@@ -8,102 +8,81 @@ function [s_asw, couponDates] = assetSwapSpread(datesDF, discounts, settlementDa
 %   BPV_float = floating leg annuity (ACT/360)
 %
 %   INPUT:
-%     datesDF        - risk-free curve pillar dates
-%     discounts      - corresponding discount factors
-%     settlementDate - settlement date (t0)
-%     issueDate      - bond issue date
-%     maturityDate   - bond maturity date
-%     cleanPrice     - market clean price in decimal (e.g. 1.015 = 101.5%)
-%     coupon         - annual coupon rate in decimal  (e.g. 0.046 =   4.6%)
+%     datesDF        
+%     discounts      
+%     settlementDate 
+%     issueDate      
+%     maturityDate   
+%     cleanPrice     
+%     coupon         
 %
 %   OUTPUT:
-%     s_asw - Asset Swap Spread 
+%     s_asw : Asset Swap Spread 
 
-% Build the full schedule of annual coupon dates
-couponDates = [];
-d = issueDate;
-while true
-    d = addtodate(d, 1, 'year');
-    couponDates = [couponDates; d];
-    if d >= maturityDate, break; end
+% Schedule of annual coupon dates
+nCoupons    = round(years(datetime(maturityDate, 'ConvertFrom', 'datenum') - ...
+                          datetime(issueDate, 'ConvertFrom', 'datenum')));
+couponDates = zeros(nCoupons, 1);
+for i = 1:nCoupons
+    couponDates(i) = addtodate(issueDate, i, 'year');
 end
-couponDates(end) = maturityDate;  % force last date = maturity
+couponDates(end) = maturityDate;
 
-% Last coupon date before settlement → accrual start
-% If no coupon has been paid yet, accrual starts from issue date
+% Last coupon date before settlement (accrual start)
 pastDates = couponDates(couponDates <= settlementDate);
 if isempty(pastDates)
-    lastCoupon = issueDate;
+    lastCoupon = issueDate; % if no coupon has been paid yet, accrual starts from issue date
 else
     lastCoupon = pastDates(end);
 end
 
-% Future coupon dates (strictly after settlement)
+% Future coupon dates 
 futureDates = couponDates(couponDates > settlementDate);
-% In our case: 31-Mar-2008, 31-Mar-2009, 31-Mar-2010, 31-Mar-2011, 31-Mar-2012
 
-%  Market dirty price:  C_bar(0)
-%
-%  Accrual  = coupon * yearfrac(lastCoupon, settlement)   [ACT/ACT]
-%  C_bar(0) = cleanPrice + AI
+%% Market dirty price:  C_bar(0)= cleanPrice + A
+% Accrual
+A = coupon * yearfrac(lastCoupon, settlementDate, 0);  % ACT/365
 
-AC    = coupon * yearfrac(lastCoupon, settlementDate, 0);  % ACT/ACT
-C_bar = cleanPrice + AC;
+C_bar = cleanPrice + A;
 
-%   Risk free price: C(0)
-%
-%   C(0) = sum_{i=1}^{N} coupon * delta_i * B(t0, ti)  +  B(t0, tN)
-%   delta_i = yearfrac(t_{i-1}, t_i)   ACT/ACT
-%   Period start dates: lastCoupon for first period, then futureDates(i-1)
-
-periodStarts = [lastCoupon; futureDates(1:end-1)];
-
+%% Risk free price: C(0)
+% Period start dates: lastCoupon for first period, then futureDates(i-1)
+startDates = [lastCoupon; futureDates(1:end-1)];
 C0 = 0;
+
 % Calculation of coupons price
 for i = 1:length(futureDates)
-    delta_i = yearfrac(periodStarts(i), futureDates(i), 3);   % ACT/365
-    df_i  = linearRateInterp(datesDF, discounts, settlementDate, futureDates(i)); %B(t0, ti)
-    C0    = C0 + coupon * delta_i * df_i;
+    delta_i = yearfrac(startDates(i), futureDates(i), 3);   % ACT/365
+    B_i  = linearRateInterp(datesDF, discounts, settlementDate, futureDates(i)); %B(t0, ti) risk free DF
+    C0    = C0 + coupon * delta_i * B_i;
 end
+% Principal payment at maturity
+B_N = linearRateInterp(datesDF, discounts, settlementDate, maturityDate);
 
-% Add principal payment at maturity
-df_N = linearRateInterp(datesDF, discounts, settlementDate, maturityDate);
-C0   = C0 + df_N;
+C0   = C0 + B_N;
 
-% 4. Floating leg BPV  (Euribor 3M, ACT/360)
-%
-%   BPV = sum_{j=1}^{Nf} delta_j * B(t0, tj)
-%   Dates: 3M steps forward from settlement to maturity
+%% Floating leg BPV  (Euribor 3M, ACT/360)
 
-floatDates = [];
-d = settlementDate;
-while true
-    d = addtodate(d, 3, 'month');
-    floatDates = [floatDates; d];
-    if d >= maturityDate, break; end
+% Schedule of floating leg payments
+nQuarters = round((maturityDate - settlementDate) / (365.25/4));
+floatDates = zeros(nQuarters, 1);
+for i = 1:nQuarters
+    floatDates(i) = addtodate(settlementDate, i*3, 'month'); % each 3 months 
 end
-floatDates(end) = maturityDate;  % last float date = bond maturity
+floatDates(end) = maturityDate; % last float date = bond maturity 
 
+% Period start dates
 floatStarts = [settlementDate; floatDates(1:end-1)];
 
+% BPV = sum_{j=1,..,Nf} delta_j * B(t0, tj)
 BPV = 0;
 for j = 1:length(floatDates)
     delta_j = yearfrac(floatStarts(j), floatDates(j), 2);     % ACT/360
-    df_j  = linearRateInterp(datesDF, discounts, settlementDate, floatDates(j));
-    BPV   = BPV + delta_j * df_j;
+    B_j  = linearRateInterp(datesDF, discounts, settlementDate, floatDates(j));
+    BPV   = BPV + delta_j * B_j;
 end
 
-
-%ASSET SWAP SPREAD
+%% asset swap spread
 s_asw = (C0 - C_bar) / BPV;
-
-% ── Summary ───────────────────────────────────────────────────────────────
-fprintf('\n--- Asset Swap Spread Breakdown ---\n');
-fprintf('Last coupon date : %s\n',       datestr(lastCoupon));
-fprintf('Accrual : %.6f\n',     AC);
-fprintf('Dirty Price      : %.6f\n',     C_bar);
-fprintf('C(0) risk-free   : %.6f\n',     C0);
-fprintf('BPV float        : %.6f\n',     BPV);
-fprintf('ASW Spread       : %.4f bps\n', s_asw * 10000);
 
 end
