@@ -41,7 +41,7 @@ futureDates = couponDates(couponDates > settlementDate);
 
 %% Market dirty price:  C_bar(0)= cleanPrice + A
 % Accrual
-A = coupon * yearfrac(lastCoupon, settlementDate, 0);  % ACT/365
+A = coupon * yearfrac(lastCoupon, settlementDate, 3);  % ACT/365
 
 C_bar = cleanPrice + A;
 

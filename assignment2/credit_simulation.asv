@@ -1,10 +1,19 @@
 % exercise 5 : credit_simulation
-
-lambda1 = 0.0004;
-lambda2 = 0.0010;
-theta   = 5;
-
+function [lambda1_emp, lambda2_emp] = credit_simulation(theta,lambda1, lambda2)
+% CREDIT_SIMULATION: Simulates 10^5 scenarios through the non constant Intensity
+% based model and returns a validation of the parameters using the
+% loglinear plot of the empirical probability
+%
+% INPUTS:
+%   theta: point in time where the intensity changes
+%   lambda1, lambda2: values of the intensity parameter
+% OUTPUTS:
+%   lambda1_emp, lambda2_emp: the resulting empirical parameters
+% SHOWS:
+%   the loglinear graph of the theorical survival probability over time
+%   on the same plot: the empirical probability and its 95% confidence interval
 %% Question a)
+% Simulation of a single 
 u   = rand;
 v   = -log(u);
 
@@ -15,7 +24,7 @@ if v <= threshold
 else
     tau = theta + (v-threshold)/lambda2;
 end
-tau
+tau;
 
 %% Question b)
 
@@ -45,6 +54,10 @@ P_up  = P_emp + z * sqrt(P_emp.*(1-P_emp)/M);
 P_low = P_emp - z * sqrt(P_emp.*(1-P_emp)/M);
 
 figure;
+first_line = polyfit(tGrid(tGrid<=theta), log(P_emp(tGrid<=theta)),1);
+lambda1_emp = -first_line(1)
+second_line = polyfit(tGrid(tGrid>theta), log(P_emp(tGrid>theta)),1);
+lambda2_emp = -second_line(1)
 semilogy(tGrid, P_true, 'b-',  'LineWidth', 2); hold on
 semilogy(tGrid, P_emp,  'r--', 'LineWidth', 2);
 semilogy(tGrid, P_up,   'k:',  'LineWidth', 1);
@@ -52,4 +65,5 @@ semilogy(tGrid, P_low,  'k:',  'LineWidth', 1);
 xlabel('t (years)'); ylabel('P(t) — log scale')
 legend('True','Empirical','CI 95%')
 title('Survival Probability — empirical estimator')
+end
 

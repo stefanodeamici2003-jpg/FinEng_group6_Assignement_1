@@ -55,7 +55,6 @@ missing_s=spline([1,2,3,4,5,7],[29; 34; 37; 39; 40; 40] / 10000,6);
 recovery = 0.4;
 
 figure;
-
 for i = 1:3
     [datesCDS, survProbs, intensities] = bootstrapCDS(dates, discounts, datesCDS, spreadsCDS, i, recovery);
     t = (datesCDS - datesCDS(1)) / 365;  % year from t0
@@ -84,7 +83,6 @@ xlabel('year');
 ylabel('survProbs');
 title('survProbs CDS');
 grid on;
-
 
  %% Exercise 6
  % Making use of the curve found in Es.1 find the NPV of a cash flow recived
