@@ -48,14 +48,8 @@ fprintf('ASW Spread : %.4f bps\n', s_asw * 10000);
 
 % A) Construction & plot of the spline-complete set
 % Construction of the Dataset
-[datesCDS, spreadsCDS] = construct_dataset_ES_4();
-
-y=spline(datesCDS,spreadsCDS,dates);
-figure;
-plot(dates, y, 'b-', 'LineWidth', 1.5); 
-hold on;
-plot(datesCDS, spreadsCDS, 'ro', 'MarkerSize', 7, 'LineWidth', 1.5); % original date
-datetick('x', 'yyyy'); 
+missing_s=spline([1,2,3,4,5,7],[29; 34; 37; 39; 40; 40] / 10000,6);
+[datesCDS, spreadsCDS] = construct_dataset_ES_4(missing_s);
 
 % B) Intensities with all 3 methods
 recovery = 0.4;
@@ -92,9 +86,9 @@ title('survProbs CDS');
 grid on;
 
 
-% %% Exercise 6
-% % Making use of the curve found in Es.1 find the NPV of a cash flow recived
-% % on the 19th of each month with an Average Annual Growth Rate of 5%
-% % applied in March of each year
-% initial_amount = 1.5 *10^3;
-% NPV = discounted_cash_flow(dates, discounts, initial_amount)
+ %% Exercise 6
+ % Making use of the curve found in Es.1 find the NPV of a cash flow recived
+ % on the 19th of each month with an Average Annual Growth Rate of 5%
+ % applied in March of each year
+initial_amount = 1.5 *10^3;
+NPV = discounted_cash_flow(dates, discounts, initial_amount)
