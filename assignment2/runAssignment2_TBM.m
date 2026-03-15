@@ -84,9 +84,43 @@ ylabel('survProbs');
 title('survProbs CDS');
 grid on;
 
- %% Exercise 6
- % Making use of the curve found in Es.1 find the NPV of a cash flow recived
- % on the 19th of each month with an Average Annual Growth Rate of 5%
- % applied in March of each year
+%% Exercise 5: credit simulation
+%   theta: point in time where the intensity changes
+%   lambda1, lambda2: values of the intensity parameter
+lambda1 = 0.0004;
+lambda2 = 0.0010;
+theta   = 5;
+
+%% Question a)
+% Simulation of a singular default time through the non constant Intensity
+% based model
+u = rand;
+v = -log(u);
+
+% Piecewise lambda => we can integrate easily and then deduce tau
+threshold = lambda1 * theta;   % = 0.002
+if v <= threshold
+    tau = v/lambda1;
+else
+    tau = theta + (v-threshold)/lambda2;
+end
+tau
+
+%% Question b)
+% Simulates M=10^5 scenarios through the non constant Intensity
+% based model and returns a validation of the parameters using the
+% loglinear plot of the empirical survival probability probability and a
+% plot of the default time density function
+M = 10^5;
+lambda1 = 0.0004;
+lambda2 = 0.0010;
+theta   = 5;
+[P_emp, P_true] = survival_probability(lambda1,lambda2,theta,M);
+
+
+%% Exercise 6
+% Making use of the curve found in Es.1 find the NPV of a cash flow recived
+% on the 19th of each month with an Average Annual Growth Rate of 5%
+% applied in March of each year
 initial_amount = 1.5 *10^3;
 NPV = discounted_cash_flow(dates, discounts, initial_amount)

@@ -1,0 +1,86 @@
+function [datesCDS, survProbs, intensities] = bootstrapCDS(datesDF, discounts, datesCDS, spreadsCDS, flag, recovery)
+% BOOTSTRAPCDS  Bootstrapping of survival probabilities and intensities given the spread CDS
+%
+%   INPUT:
+%     datesDF    
+%     discounts  
+%     datesCDS   
+%     spreadsCDS 
+%     flag       : 1: without accrual  2: with accrual 3: Jarrow-Turnbull
+%     recovery   : 40%
+%
+%   OUTPUT:
+%     datesCDS   
+%     survProbs  : survival proba
+%     intensities: hazard rate
+
+LGD = 1 - recovery;   % Loss Given Default
+t_0  = datesDF(1);     % Settlement date
+
+% discount factors for CDS
+B_cds = zeros(length(datesCDS),1);
+for i = 1:length(datesCDS)
+    B_cds(i) = linearRateInterp(datesDF, discounts, t_0, datesCDS(i));
+end
+
+N = length(datesCDS);
+survProbs = zeros(N, 1);
+intensities = zeros(N, 1);
+
+%% bootstrap
+P_prev = 1.0;   % P(t0, t0) = 1 
+t_prev = t_0;
+
+% Ini Premium Leg e Default Leg (somme sui nodi 1..a-1)
+FixLeg  = 0;
+ContLeg  = 0;   % usato da flag 1 e 2 (formula diversa per ognuno)
+
+for i = 1:N
+    S = spreadsCDS(i);    % Fixed leg
+    t_i = datesCDS(i);      % Dates of different CDS
+    B_i = B_cds(i);      % Discount Factors in CDS Dates
+
+    delta_i = yearfrac(t_prev, t_i, 2);   % ACT/360 
+    dt  = yearfrac(t_prev, t_i, 3);   % ACT/365 (for intensity computation)
+
+    switch flag
+        case 1  % without accrual
+            % Fix leg :  S * sum_{i=1,...N} delta_i * B_i * P_i
+            % Contingent leg : LGD * sum_{i=1,..,N} B_i * (P_{i-1} - P_i)   (no accrual)
+            num = LGD * (ContLeg + B_i * P_prev) - S * FixLeg;
+            den = B_i * (S * delta_i + LGD);
+            P_i = num / den;
+            % Intensity based model
+            intensities(i) = -log(P_i/P_prev) / dt;
+
+        case 2  % with accrual
+            % we add in the fix leg : S * delta(t_i-1 , tau) * B_i * (P_{i-1} - P_i) ≈ S * 0.5 * delta_i  * B_i * (P_{i-1} - P_i) 
+            num = LGD * (ContLeg + B_i * P_prev) - S * (FixLeg + 0.5 * delta_i * B_i * P_prev) ;
+            den = B_i * (LGD + 0.5*S*delta_i);
+            P_i = num / den;
+            % Intensity based model
+            intensities(i) = -log(P_i/P_prev) / dt;
+            
+
+        case 3  % Jarrow-Turnbull 
+            % constant intensity : lambda = S / LGD
+            % P(t) = exp(-lambda * T)
+            lambda_JT = S / LGD;
+            dT = yearfrac(t_0, t_i, 3);   % ACT/365
+            P_i = exp(-lambda_JT * dT);
+            intensities(i) = lambda_JT;
+    end
+    
+    survProbs(i)   = P_i;
+
+    % Fix leg and contingent leg update
+    if flag == 1 || flag == 2
+        FixLeg = FixLeg + delta_i * B_i * P_i;
+        ContLeg = ContLeg + B_i * (P_prev - P_i);
+    end
+
+    P_prev = P_i;
+    t_prev = t_i;
+end
+
+end
