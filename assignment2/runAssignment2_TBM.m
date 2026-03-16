@@ -122,5 +122,5 @@ theta   = 5;
 % Making use of the curve found in Es.1 find the NPV of a cash flow recived
 % on the 19th of each month with an Average Annual Growth Rate of 5%
 % applied in March of each year
-initial_amount = 1.5 *10^3;
+initial_amount = 6 *10^3;
 NPV = discounted_cash_flow(dates, discounts, initial_amount)

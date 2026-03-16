@@ -19,16 +19,20 @@ function [s_asw, couponDates] = assetSwapSpread(datesDF, discounts, settlementDa
 %   OUTPUT:
 %     s_asw : Asset Swap Spread 
 
-% Schedule of annual coupon dates
-nCoupons    = round(years(datetime(maturityDate, 'ConvertFrom', 'datenum') - ...
-                          datetime(issueDate, 'ConvertFrom', 'datenum')));
+%% Dirty Price C_bar(0)
+% Rough calculation of the number of coupons in the lifespan of the Bond,
+% rounded by the function round()
+nCoupons = round((maturityDate - issueDate) / 365.25);
 couponDates = zeros(nCoupons, 1);
+
+% The function calculates the theoretical point in time where coupons 
+% should be paid without worring about the working days
 for i = 1:nCoupons
     couponDates(i) = addtodate(issueDate, i, 'year');
 end
-couponDates(end) = maturityDate;
 
-% Last coupon date before settlement (accrual start)
+% Last coupon date before settlement in order to be able to calculate the
+% Accrual starting point
 pastDates = couponDates(couponDates <= settlementDate);
 if isempty(pastDates)
     lastCoupon = issueDate; % if no coupon has been paid yet, accrual starts from issue date
@@ -39,37 +43,48 @@ end
 % Future coupon dates 
 futureDates = couponDates(couponDates > settlementDate);
 
-%% Market dirty price:  C_bar(0)= cleanPrice + A
-% Accrual
+% Accrual: we don't need to use busdate() since settlement date is for sure
+% a business day
 A = coupon * yearfrac(lastCoupon, settlementDate, 3);  % ACT/365
 
-C_bar = cleanPrice + A;
+% Market dirty price:  C_bar(0)= cleanPrice + A
+C_bar = cleanPrice + A
 
 %% Risk free price: C(0)
-% Period start dates: lastCoupon for first period, then futureDates(i-1)
+% Period start dates: contains the starting points of the year fraction starting
+% from the last time a coupon has been paid up to futureDates(end-1)
 startDates = [lastCoupon; futureDates(1:end-1)];
 C0 = 0;
 
 % Calculation of coupons price
 for i = 1:length(futureDates)
-    delta_i = yearfrac(startDates(i), futureDates(i), 3);   % ACT/365
-    B_i  = linearRateInterp(datesDF, discounts, settlementDate, futureDates(i)); %B(t0, ti) risk free DF
-    C0    = C0 + coupon * delta_i * B_i;
+    % unadjusted yearfrac between two couponn payment dates
+    delta_i = yearfrac(startDates(i), futureDates(i), 3);
+    
+    % Calculation through the Financial Toolbox function busdate()
+    % of the exact date with respect to the "modified following"
+    % criteria used to determine the correct discount factor
+    adjustedDate = busdate(futureDates(i), 'modifiedfollow');
+    B_i = linearRateInterp(datesDF, discounts, settlementDate, adjustedDate);
+    
+    C0 = C0 + coupon * delta_i * B_i;
 end
 % Principal payment at maturity
-B_N = linearRateInterp(datesDF, discounts, settlementDate, maturityDate);
+B_N = linearRateInterp(datesDF, discounts, settlementDate, busdate(maturityDate, "modifiedfollow"));
 
-C0   = C0 + B_N;
+C0   = C0 + B_N
 
 %% Floating leg BPV  (Euribor 3M, ACT/360)
-
-% Schedule of floating leg payments
+% Calculation of the quarters in the lifespan of the bound or number of
+% coupon payment days
 nQuarters = round((maturityDate - settlementDate) / (365.25/4));
 floatDates = zeros(nQuarters, 1);
+% Proceeding in the same fashion of the previous sector:
+
+% Schedule of the theoretical days when coupons will be paid
 for i = 1:nQuarters
     floatDates(i) = addtodate(settlementDate, i*3, 'month'); % each 3 months 
 end
-floatDates(end) = maturityDate; % last float date = bond maturity 
 
 % Period start dates
 floatStarts = [settlementDate; floatDates(1:end-1)];
@@ -78,10 +93,11 @@ floatStarts = [settlementDate; floatDates(1:end-1)];
 BPV = 0;
 for j = 1:length(floatDates)
     delta_j = yearfrac(floatStarts(j), floatDates(j), 2);     % ACT/360
-    B_j  = linearRateInterp(datesDF, discounts, settlementDate, floatDates(j));
+    adjustedDate = busdate(floatDates(j), 'modifiedfollow');
+    B_j  = linearRateInterp(datesDF, discounts, settlementDate, adjustedDate);
     BPV   = BPV + delta_j * B_j;
 end
-
+BPV
 %% asset swap spread
 s_asw = (C0 - C_bar) / BPV;
 
