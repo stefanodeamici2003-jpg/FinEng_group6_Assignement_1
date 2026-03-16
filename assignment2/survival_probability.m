@@ -1,5 +1,5 @@
 % EXERCISE 5
-function [P_emp, P_true] = survival_probability(lambda1,lambda2,theta,M)
+function [P_emp, P_true, lambda1_emp, lambda2_emp] = survival_probability(lambda1,lambda2,theta,M)
 % INPUTS:
 %   theta: point in time where the intensity changes
 %   lambda1, lambda2: values of the intensity parameter
