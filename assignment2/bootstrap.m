@@ -3,7 +3,7 @@ function [dates, discounts, zeroRates] = bootstrap(datesSet, ratesSet)
 %
 %   Uses three instrument types in sequence:
 %     1. Deposits    – short end,  Act/360, simply compounded
-%     2. STIR Futures– mid range,  Act/360 forward rates (log-linear interp)
+%     2. STIR Futures– mid range,  fixed 0.25 year fraction (3M convention)
 %     3. Swaps vs 3M – long end,   fixed leg annual 30/360 EU
 %
 % INPUTS:
@@ -17,43 +17,35 @@ function [dates, discounts, zeroRates] = bootstrap(datesSet, ratesSet)
 settlementDate = datesSet.settlement;
 
 % Mid-market rates (average of bid and ask)
-midDepos   = mean(ratesSet.depos,   2);   
-midFutures = mean(ratesSet.futures, 2);   
+midDepos   = mean(ratesSet.depos,   2);
+midFutures = mean(ratesSet.futures, 2);
 midSwaps   = mean(ratesSet.swaps,   2);
 
-% Initialise curve at settlement:  B(t0, t0) = 1
+% Initialise curve at settlement: B(t0, t0) = 1
 dates     = settlementDate;
 discounts = 1.0;
 
 %% DEPOSITS
 %  B(t0, T) = 1 / (1 + r * delta)
+%  Use first 3 deposits only (matches Python logic)
 
-nDepos = length(datesSet.depos);
+nDepos = min(3, length(datesSet.depos));
 
-firstFutSettle = datesSet.futures(1, 1);
 for i = 1:nDepos
-    if datesSet.depos(i) >= firstFutSettle
-        break   % we stop when there is an overlap with futures (more liquid)
-    end
-    T     = datesSet.depos(i); % end dates of depos
-    delta = (T - settlementDate) / 360;
+    T     = datesSet.depos(i);
+    delta = (T - settlementDate) / 360;   % Act/360
     B     = 1.0 / (1.0 + midDepos(i) * delta);
     [dates, discounts] = insertPoint(dates, discounts, T, B);
 end
 
 %% STIR FUTURES
-%  B(t0, T2) = B(t0, T1) / (1 + r_fwd * delta)
-%  B(t0, T1) obtained by log-linear interpolation on current curve
+%  B(t0, T_i) = B(t0, T_{i-1}) * 1 / (1 + r_fwd * 0.25)
+%  Chain on the last discount factor — no interpolation needed
 
 nFut = min(7, size(datesSet.futures, 1));
 for i = 1:nFut
-    T1    = datesSet.futures(i, 1);   % period start (IMM date)
-    T2    = datesSet.futures(i, 2);   % period end
-    delta = (T2 - T1) / 360;          % Act/360
-    
-    B_T1 = linearRateInterp(dates, discounts, settlementDate, T1); %
-    %  B(t0, T2) = B(t0, T1) / (1 + r_fwd * delta) 
-    B_T2 = B_T1 / (1.0 + midFutures(i) * delta);
+    T2   = datesSet.futures(i, 2);        % period end date
+    B_T2 = discounts(end) * (1.0 / (1.0 + midFutures(i) * 0.25));
     [dates, discounts] = insertPoint(dates, discounts, T2, B_T2);
 end
 
@@ -63,45 +55,38 @@ discounts = discounts(sortIdx);
 
 %% SWAPS vs Euribor 3M
 %  B(t0, T_n) = (1 - K * BPV_{n-1}) / (1 + K * delta_n)
+%  BPV is maintained as a running accumulator across swap pillars
 
-nSwaps = length(datesSet.swaps);
-lastFutEnd = datesSet.futures(nFut, 2);  % end of the 7th future
+nSwaps   = length(datesSet.swaps);
+lastFutEnd = datesSet.futures(nFut, 2);
+
+% Initialise BPV with the 1y swap (covered by futures, not bootstrapped)
+firstSwapDate = datesSet.swaps(1);
+yf_1 = yearfrac(settlementDate, firstSwapDate, 6);    % 30/360 EU
+B_1  = linearRateInterp(dates, discounts, settlementDate, firstSwapDate);
+BPV  = yf_1 * B_1;
+prevDate = firstSwapDate;
 
 for i = 1:nSwaps
     if datesSet.swaps(i) <= lastFutEnd
-        continue   % we start after the last future
+        continue   % skip pillars already covered by futures
     end
-    T_n = datesSet.swaps(i);
-    K   = midSwaps(i);
 
-    % Number of annual coupon periods
-    nYears = year(T_n) - year(settlementDate);
+    T_n     = datesSet.swaps(i);
+    K       = midSwaps(i);
+    delta_n = yearfrac(prevDate, T_n, 6);              % 30/360 EU
 
-    % Fixed-leg payment dates
-    fixedDates = zeros(nYears, 1);
-    for j = 1:nYears
-        fixedDates(j) = addtodate(settlementDate, j, 'year');
-    end
-    fixedDates(end) = T_n;   % last payment coincides with swap maturity
-
-    % Accumulate BPV for periods 1 to n-1 
-    BPV      = 0.0;
-    prevDate = settlementDate;
-    for j = 1:nYears - 1
-        delta_j = yearfrac(prevDate, fixedDates(j), 6);   % 30/360 EU
-        B_j     = linearRateInterp(dates, discounts, settlementDate, prevDate);
-        BPV     = BPV + delta_j * B_j;
-        prevDate = fixedDates(j);
-    end
-    % BTn discount factor 
-    delta_n = yearfrac(prevDate, T_n, 6);     % 30/360 EU
-    B_Tn    = (1.0 - K * BPV) / (1.0 + K * delta_n);
+    B_Tn = (1.0 - K * BPV) / (1.0 + K * delta_n);
 
     [dates, discounts] = insertPoint(dates, discounts, T_n, B_Tn);
+
+    % Increment BPV for next iteration
+    BPV      = BPV + delta_n * B_Tn;
+    prevDate = T_n;
 end
 
 %% Zero rates
-%  z(T) = -ln(B(t0,T)) / ((T - t0)/365)
+%  z(T) = -ln(B(t0,T)) / ((T - t0)/365)  Act/365 continuously compounded
 T_ACT365  = (dates - settlementDate) / 365;
 zeroRates = zeros(size(dates));
 
@@ -114,11 +99,8 @@ zeroRates(~validIdx) = NaN;
 end % bootstrap
 
 
-
-
 function [datesOut, discountsOut] = insertPoint(dates, discounts, t, B)
 %INSERTPOINT  Insert or overwrite a point in the (sorted) curve.
-%   If t already exists, overwrite the discount; otherwise append and sort.
 idx = find(dates == t, 1);
 if isempty(idx)
     datesOut     = [dates;     t];
@@ -130,4 +112,4 @@ else
     discountsOut        = discounts;
     discountsOut(idx)   = B;
 end
-end % insertPointend
+end % insertPoint
