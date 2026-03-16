@@ -108,8 +108,11 @@ M = 10^5;
 lambda1 = 0.0004;
 lambda2 = 0.0010;
 theta   = 5;
-[P_emp, P_true, lambda1_emp, lambda2_emp] = survival_probability(lambda1,lambda2,theta,M);
-
+[P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M);
+disp(['lambda1 estimate = ',num2str(lambda1_emp)])
+disp(['lambda1 CI = [',num2str(CI_lambda1(1)),' , ',num2str(CI_lambda1(2)),']'])
+disp(['lambda2 estimate = ',num2str(lambda2_emp)])
+disp(['lambda2 CI = [',num2str(CI_lambda2(1)),' , ',num2str(CI_lambda2(2)),']'])
 
 %% Exercise 6
 % Making use of the curve found in Es.1 find the NPV of a cash flow recived

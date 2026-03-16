@@ -1,11 +1,11 @@
-function [P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M)
+function [P_emp, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M)
 
 % INPUTS:
 % lambda1, lambda2 : intensity parameters
 % theta            : switching time
 % M                : number of simulations
 
-%simulate default times tau
+%% 1) Simulate default times tau
 
 u = rand(M,1);
 v = -log(u);
@@ -16,11 +16,12 @@ threshold = lambda1 * theta;
 tau_vect(v <= threshold) = v(v <= threshold) / lambda1;
 tau_vect(v > threshold)  = theta + (v(v > threshold) - threshold) / lambda2;
 
-%empirical survival probability
+%% 2) Empirical survival probability
+
 tGrid = linspace(0,30,500);
 P_emp = arrayfun(@(t) mean(tau_vect > t), tGrid);
 
-%Fit lambda1 and lambda2 from log survival
+%% 3) Fit lambda1 and lambda2 from log survival
 
 %(t <= theta)
 mask1 = tGrid > 0 & tGrid <= theta;
@@ -46,18 +47,24 @@ se2 = mdl2.Coefficients.SE(2);
 
 CI_lambda2 = lambda2_emp + [-1.96 1.96]*se2;
 
-%fitted survival probability
+%% 4) Construct fitted survival probability
+
 P_fit = zeros(size(tGrid));
+
 P_fit(tGrid<=theta) = exp(-lambda1_emp * tGrid(tGrid<=theta));
+
 P_fit(tGrid>theta) = exp(-lambda1_emp*theta ...
                       - lambda2_emp*(tGrid(tGrid>theta)-theta));
 
-%Confidence interval for empirical survival
+%% 5) Confidence interval for empirical survival
+
 z = 1.96;
+
 P_up  = P_emp + z*sqrt(P_emp.*(1-P_emp)/M);
 P_low = P_emp - z*sqrt(P_emp.*(1-P_emp)/M);
 
-%plot (loglinear scale)
+%% 6) Plot (loglinear scale)
+
 figure
 
 semilogy(tGrid,P_emp,'r','LineWidth',2)
@@ -72,5 +79,13 @@ ylabel('Survival Probability (log scale)')
 legend('Empirical','Fitted','CI 95%')
 
 title('Empirical vs Fitted Survival Probability')
+
+%% 7) Display estimators
+
+disp(['lambda1 estimate = ',num2str(lambda1_emp)])
+disp(['lambda1 CI = [',num2str(CI_lambda1(1)),' , ',num2str(CI_lambda1(2)),']'])
+
+disp(['lambda2 estimate = ',num2str(lambda2_emp)])
+disp(['lambda2 CI = [',num2str(CI_lambda2(1)),' , ',num2str(CI_lambda2(2)),']'])
 
 end
