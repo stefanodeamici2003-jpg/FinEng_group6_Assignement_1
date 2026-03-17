@@ -23,7 +23,10 @@ def year_frac_act_x(t1: dt.datetime, t2: dt.datetime, x: int) -> float:
     Returns:
         float: Year fraction between the two dates.
     """
-
+    if hasattr(t1, 'date'):
+        t1 = t1.date()
+    if hasattr(t2, 'date'):
+        t2 = t2.date()
     return (t2 - t1).days / x
 
 

@@ -7,13 +7,13 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 import datetime as dt
-from date_functions import (
+from utilities.date_functions import (
     year_frac_act_x,
     date_series,
     year_frac_30e_360,
     schedule_year_fraction,
 )
-from ex0_utilities import (
+from utilities.ex0_utilities import (
     get_discount_factor_by_zero_rates_linear_interp,
 )
 
@@ -148,9 +148,21 @@ def swap_par_rate(
     """
 
     # !!! MODIFY AS APPROPRIATE !!!
-    discount_factor_t0 = None if fwd_start_date is not None else None
+    discount_factor_t0 = get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        fwd_start_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) if fwd_start_date is not None else None
 
-    bpv = None  # !!! MODIFY AS APPROPRIATE !!!
+    # !!! MODIFY AS APPROPRIATE !!!
+    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        payment_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) * year_frac_act_x(fwd_start_date, payment_date, 365) for payment_date in fixed_leg_schedule)
+        
 
     discount_factor_tN = get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
