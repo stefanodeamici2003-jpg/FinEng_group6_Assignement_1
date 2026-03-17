@@ -10,7 +10,7 @@
 clear all;
 close all;
 clc;
-
+format long
 %% Settings
 formatData='dd/mm/yyyy'; %Pay attention to your computer settings 
 

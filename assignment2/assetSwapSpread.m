@@ -48,7 +48,7 @@ futureDates = couponDates(couponDates > settlementDate);
 A = coupon * yearfrac(lastCoupon, settlementDate, 3);  % ACT/365
 
 % Market dirty price:  C_bar(0)= cleanPrice + A
-C_bar = cleanPrice + A
+C_bar = cleanPrice + A;
 
 %% Risk free price: C(0)
 % Period start dates: contains the starting points of the year fraction starting
@@ -59,7 +59,7 @@ C0 = 0;
 % Calculation of coupons price
 for i = 1:length(futureDates)
     % unadjusted yearfrac between two couponn payment dates
-    delta_i = yearfrac(startDates(i), futureDates(i), 3);
+    delta_i = yearfrac(startDates(i), futureDates(i), 6); %30/360
     
     % Calculation through the Financial Toolbox function busdate()
     % of the exact date with respect to the "modified following"
