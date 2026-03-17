@@ -66,7 +66,12 @@ def swaption_price_calculator(
     d2 = None  # !!! COMPLETE AS APPROPRIATE !!!
 
     fixed_leg_payment_dates = date_series(expiry, underlying_expiry, freq)
-    bpv = None  # !!! COMPLETE AS APPROPRIATE !!!
+    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        payment_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) * year_frac_act_x(ref_date, payment_date, 365) for payment_date in fixed_leg_payment_dates)
 
     if swaption_type == SwapType.PAYER:
         price = bpv * (strike * norm.cdf(-d2) - S0 * norm.cdf(-d1))
