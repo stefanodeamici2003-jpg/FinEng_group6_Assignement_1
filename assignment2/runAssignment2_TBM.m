@@ -1,16 +1,9 @@
 % runAssignment2
-%  group X, AY20ZZ-20ZZ
-% Computes Euribor 3m bootstrap with a single-curve model
-%
-% This is just code structure: it should be completed & modified (TBM)
-%
-% to run:
-% > runAssignment2_TBM
+%  group 6, AY2025-2026
+% 
 
-clear all;
-close all;
-clc;
-format long
+clear all; close all; clc;
+
 %% Settings
 formatData='dd/mm/yyyy'; %Pay attention to your computer settings 
 
@@ -20,8 +13,6 @@ formatData='dd/mm/yyyy'; %Pay attention to your computer settings
 %% Exercise 1 : P&L impacts for an IRS
 % dates includes SettlementDate as first date
 [dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet); 
-
-% Plot Result
 figure;
 
 yyaxis left
@@ -35,6 +26,8 @@ datetick('x', 'yyyy');
 grid on;
 legend({'discounts', 'zero rates'}, 'Location', 'northeast');
 title('IR Curve - 15 Feb 2008');
+
+%% Exercise 2: --> report 
 
 %% Exercise 3: Asset Swap
 issueDate = datenum('31/03/2007', 'dd/mm/yyyy');
@@ -84,6 +77,7 @@ ylabel('survProbs');
 title('survProbs CDS');
 grid on;
 
+
 %% Exercise 5: credit simulation
 %   theta: point in time where the intensity changes
 %   lambda1, lambda2: values of the intensity parameter
@@ -96,7 +90,6 @@ theta   = 5;
 % based model
 u = rand;
 v = -log(u);
-
 % Piecewise lambda => we can integrate easily and then deduce tau
 threshold = lambda1 * theta;   % = 0.002
 if v <= threshold
@@ -115,12 +108,17 @@ M = 10^5;
 lambda1 = 0.0004;
 lambda2 = 0.0010;
 theta   = 5;
-[P_emp, P_true] = survival_probability(lambda1,lambda2,theta,M);
-
+[P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M);
+disp(['lambda1 estimate = ',num2str(lambda1_emp)])
+disp(['lambda1 CI = [',num2str(CI_lambda1(1)),' , ',num2str(CI_lambda1(2)),']'])
+disp(['lambda2 estimate = ',num2str(lambda2_emp)])
+disp(['lambda2 CI = [',num2str(CI_lambda2(1)),' , ',num2str(CI_lambda2(2)),']'])
 
 %% Exercise 6
 % Making use of the curve found in Es.1 find the NPV of a cash flow recived
 % on the 19th of each month with an Average Annual Growth Rate of 5%
 % applied in March of each year
-initial_amount = 6 *10^3;
+initial_amount = 1.5 *10^3;
+NPV = discounted_cash_flow(dates, discounts, initial_amount)
+initial_amount = 6.0 *10^3;
 NPV = discounted_cash_flow(dates, discounts, initial_amount)
