@@ -39,8 +39,7 @@ fprintf('ASW Spread : %.4f bps\n', s_asw * 10000);
 
 %% Exercise 4: Case Study
 
-% A) Construction & plot of the spline-complete set
-% Construction of the Dataset
+% A) Construction of the spline-complete set
 missing_s=spline([1,2,3,4,5,7],[29; 34; 37; 39; 40; 40] / 10000,6);
 [datesCDS, spreadsCDS] = construct_dataset_ES_4(missing_s);
 
@@ -97,6 +96,6 @@ theta   = 5;
 % on the 19th of each month with an Average Annual Growth Rate of 5%
 % applied in March of each year
 initial_amount = 1.5 *10^3;
-NPV = discounted_cash_flow(dates, discounts, initial_amount);
+NPV_first = discounted_cash_flow(dates, discounts, initial_amount);
 initial_amount = 6.0 *10^3;
-NPV = discounted_cash_flow(dates, discounts, initial_amount);
+NPV_second = discounted_cash_flow(dates, discounts, initial_amount);
