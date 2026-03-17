@@ -77,7 +77,7 @@ C0   = C0 + B_N
 %% Floating leg BPV  (Euribor 3M, ACT/360)
 % Calculation of the quarters in the lifespan of the bound or number of
 % coupon payment days
-nQuarters = round((maturityDate - settlementDate) / (365.25/4));
+nQuarters = round((maturityDate - settlementDate) / (365.25/4))
 floatDates = zeros(nQuarters, 1);
 % Proceeding in the same fashion of the previous sector:
 
@@ -92,7 +92,7 @@ floatStarts = [settlementDate; floatDates(1:end-1)];
 % BPV = sum_{j=1,..,Nf} delta_j * B(t0, tj)
 BPV = 0;
 for j = 1:length(floatDates)
-    delta_j = yearfrac(floatStarts(j), floatDates(j), 2);     % ACT/360
+    delta_j = yearfrac(floatStarts(j), floatDates(j), 6);     % 30/360
     adjustedDate = busdate(floatDates(j), 'modifiedfollow');
     B_j  = linearRateInterp(datesDF, discounts, settlementDate, adjustedDate);
     BPV   = BPV + delta_j * B_j;

@@ -12,7 +12,7 @@ formatData='dd/mm/yyyy'; %Pay attention to your computer settings
 
 %% Exercise 1 : P&L impacts for an IRS
 % dates includes SettlementDate as first date
-[dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet); 
+[dates, discounts, zeroRates,lista_BPV]=bootstrap(datesSet, ratesSet); 
 figure;
 
 yyaxis left
@@ -27,6 +27,7 @@ grid on;
 legend({'discounts', 'zero rates'}, 'Location', 'northeast');
 title('IR Curve - 15 Feb 2008');
 
+valore = 100000000*(0.04117-0.04127)*lista_BPV(6)
 %% Exercise 2: --> report 
 
 %% Exercise 3: Asset Swap
@@ -119,6 +120,6 @@ disp(['lambda2 CI = [',num2str(CI_lambda2(1)),' , ',num2str(CI_lambda2(2)),']'])
 % on the 19th of each month with an Average Annual Growth Rate of 5%
 % applied in March of each year
 initial_amount = 1.5 *10^3;
-NPV = discounted_cash_flow(dates, discounts, initial_amount)
+NPV = discounted_cash_flow(dates, discounts, initial_amount);
 initial_amount = 6.0 *10^3;
-NPV = discounted_cash_flow(dates, discounts, initial_amount)
+NPV = discounted_cash_flow(dates, discounts, initial_amount);
