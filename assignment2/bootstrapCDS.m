@@ -11,7 +11,7 @@ function [datesCDS, survProbs, intensities] = bootstrapCDS(datesDF, discounts, d
 %
 %   OUTPUT:
 %     datesCDS   
-%     survProbs  : survival proba
+%     survProbs  : survival probability
 %     intensities: hazard rate
 
 LGD = 1 - recovery;   % Loss Given Default
@@ -33,7 +33,7 @@ t_prev = t_0;
 
 % Initialization of Premium Leg and Default Leg
 FixLeg  = 0;
-ContLeg  = 0;   % usato da flag 1 e 2 (formula diversa per ognuno)
+ContLeg  = 0;   % used by flag 1 and 2 (different formula for each)
 
 for i = 1:N
     S = spreadsCDS(i);    % Fixed leg
