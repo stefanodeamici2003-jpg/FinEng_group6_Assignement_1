@@ -1,4 +1,4 @@
-function [dates, discounts, zeroRates, lista_BPV] = bootstrap(datesSet, ratesSet)
+function [dates, discounts, zeroRates] = bootstrap(datesSet, ratesSet)
 % BOOTSTRAP  Bootstraps the Euribor 3M single-curve discount factor curve.
 %
 %   Uses three instrument types in sequence:
@@ -30,7 +30,7 @@ discounts = 1.0;
 %  Use first 3 deposits only (matches Python logic)
 
 nDepos = length(datesSet.depos);
-firstFutSettle = datesSet.futures(1,1)
+firstFutSettle = datesSet.futures(1,1);
 for i = 1:nDepos
     T     = datesSet.depos(i); % end dates of depos
     delta = yearfrac(settlementDate, T, 2); %ACT/360
@@ -80,8 +80,6 @@ yf_1 = yearfrac(settlementDate, firstSwapDate, 6);    % 30/360 EU
 B_1  = linearRateInterp(dates, discounts, settlementDate, firstSwapDate);
 BPV  = yf_1 * B_1;
 prevDate = firstSwapDate;
-lista_BPV = zeros(nSwaps,1);
-lista_BPV(1) = BPV;
 for i = 1:nSwaps
     if datesSet.swaps(i) <= lastFutEnd
         continue   % skip pillars already covered by futures
@@ -96,8 +94,7 @@ for i = 1:nSwaps
     [dates, discounts] = insertPoint(dates, discounts, T_n, B_Tn);
 
     % Increment BPV for next iteration
-    BPV      = BPV + delta_n * B_Tn
-    lista_BPV(i) = BPV;
+    BPV      = BPV + delta_n * B_Tn;
     prevDate = T_n;
 end
 

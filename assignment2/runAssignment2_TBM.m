@@ -12,7 +12,7 @@ formatData='dd/mm/yyyy'; %Pay attention to your computer settings
 
 %% Exercise 1 : P&L impacts for an IRS
 % dates includes SettlementDate as first date
-[dates, discounts, zeroRates,lista_BPV]=bootstrap(datesSet, ratesSet); 
+[dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet); 
 figure;
 
 yyaxis left
@@ -27,7 +27,6 @@ grid on;
 legend({'discounts', 'zero rates'}, 'Location', 'northeast');
 title('IR Curve - 15 Feb 2008');
 
-valore = 100000000*(0.04117-0.04127)*lista_BPV(6)
 %% Exercise 2: --> report 
 
 %% Exercise 3: Asset Swap
