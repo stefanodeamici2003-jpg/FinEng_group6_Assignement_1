@@ -1,4 +1,4 @@
-function [P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M)
+function [tau_vect, P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M)
 
 % INPUTS:
 % lambda1, lambda2 : intensity parameters
@@ -6,7 +6,7 @@ function [P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = surv
 % M                : number of simulations
 
 %simulate default times tau
-
+rng(3)
 u = rand(M,1);
 v = -log(u);
 
@@ -56,6 +56,7 @@ P_fit(tGrid>theta) = exp(-lambda1_emp*theta ...
 z = 1.96;
 P_up  = P_emp + z*sqrt(P_emp.*(1-P_emp)/M);
 P_low = P_emp - z*sqrt(P_emp.*(1-P_emp)/M);
+
 
 %plot (loglinear scale)
 figure

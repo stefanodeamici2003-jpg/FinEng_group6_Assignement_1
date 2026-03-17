@@ -82,38 +82,16 @@ grid on;
 %% Exercise 5: credit simulation
 %   theta: point in time where the intensity changes
 %   lambda1, lambda2: values of the intensity parameter
-lambda1 = 0.0004;
-lambda2 = 0.0010;
-theta   = 5;
 
-%% Question a)
-% Simulation of a singular default time through the non constant Intensity
-% based model
-u = rand;
-v = -log(u);
-% Piecewise lambda => we can integrate easily and then deduce tau
-threshold = lambda1 * theta;   % = 0.002
-if v <= threshold
-    tau = v/lambda1;
-else
-    tau = theta + (v-threshold)/lambda2;
-end
-tau
 
-%% Question b)
 % Simulates M=10^5 scenarios through the non constant Intensity
-% based model and returns a validation of the parameters using the
-% loglinear plot of the empirical survival probability probability and a
-% plot of the default time density function
+% based model and returns a validation of the parameters
 M = 10^5;
 lambda1 = 0.0004;
 lambda2 = 0.0010;
 theta   = 5;
-[P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M);
-disp(['lambda1 estimate = ',num2str(lambda1_emp)])
-disp(['lambda1 CI = [',num2str(CI_lambda1(1)),' , ',num2str(CI_lambda1(2)),']'])
-disp(['lambda2 estimate = ',num2str(lambda2_emp)])
-disp(['lambda2 CI = [',num2str(CI_lambda2(1)),' , ',num2str(CI_lambda2(2)),']'])
+[tau_vect, P_emp, P_fit, lambda1_emp, lambda2_emp, CI_lambda1, CI_lambda2] = survival_probability(lambda1,lambda2,theta,M);
+
 
 %% Exercise 6
 % Making use of the curve found in Es.1 find the NPV of a cash flow recived
