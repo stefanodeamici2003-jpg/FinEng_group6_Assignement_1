@@ -62,9 +62,8 @@ def swaption_price_calculator(
     """
 
     ttm = year_frac_act_x(ref_date, expiry, 365)
-    d1 = None  # !!! COMPLETE AS APPROPRIATE !!!
-    d2 = None  # !!! COMPLETE AS APPROPRIATE !!!
-
+    d1 = (np.log(S0 / strike) + 0.5 * sigma_black**2 * ttm) / (sigma_black * np.sqrt(ttm))
+    d2 = (np.log(S0 / strike) - 0.5 * sigma_black**2 * ttm) / (sigma_black * np.sqrt(ttm))
     fixed_leg_payment_dates = date_series(expiry, underlying_expiry, freq)
     bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
@@ -73,10 +72,11 @@ def swaption_price_calculator(
         discount_factors.values,
     ) * year_frac_act_x(ref_date, payment_date, 365) for payment_date in fixed_leg_payment_dates)
 
-    if swaption_type == SwapType.PAYER:
+    # the PAYER and RECEIVER swaption price formulas were inverted
+    if swaption_type == SwapType.RECEIVER:
         price = bpv * (strike * norm.cdf(-d2) - S0 * norm.cdf(-d1))
         delta = bpv * (norm.cdf(d1) - 1)
-    elif swaption_type == SwapType.RECEIVER:
+    elif swaption_type == SwapType.PAYER:
         price = bpv * (S0 * norm.cdf(d1) - strike * norm.cdf(d2))
         delta = bpv * norm.cdf(d1)
     else:
