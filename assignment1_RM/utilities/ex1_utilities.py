@@ -83,6 +83,7 @@ def swaption_price_calculator(
         raise ValueError("Invalid swaption type.")
 
     if compute_delta:
+        delta = bpv * norm.cdf(d1) 
         return price, delta
     else:
         return price
