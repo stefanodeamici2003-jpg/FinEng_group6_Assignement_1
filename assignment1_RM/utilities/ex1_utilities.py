@@ -224,7 +224,7 @@ def swap_mtm(
         payment_date,
         discount_factors.index,
         discount_factors.values,
-    ) * year_frac_act_x(payments_schedule[0], payment_date, 365) for payment_date in payments_schedule[1:])  # We skip the settlement date
+    ) * year_frac_30e_360(payments_schedule[0], payment_date) for payment_date in payments_schedule[1:])  # We skip the settlement date
     P_term = get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
         payments_schedule[-1],
