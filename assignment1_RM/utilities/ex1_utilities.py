@@ -70,7 +70,7 @@ def swaption_price_calculator(
         payment_date,
         discount_factors.index,
         discount_factors.values,
-    ) * year_frac_act_x(ref_date, payment_date, 365) for payment_date in fixed_leg_payment_dates)
+    ) * year_frac_30e_360(ref_date, payment_date) for payment_date in fixed_leg_payment_dates)
 
     # the PAYER and RECEIVER swaption price formulas were inverted
     if swaption_type == SwapType.RECEIVER:
@@ -108,8 +108,23 @@ def irs_proxy_duration(
         (float): Swap duration.
     """
 
-    # !!! COMPLETE AS APPROPRIATE !!!
-    pass
+    numerator = sum( get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        payment_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) * year_frac_30e_360(ref_date, payment_date) for payment_date in fixed_leg_payment_dates) * swap_rate
+
+    denominator = sum( get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        payment_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) for payment_date in fixed_leg_payment_dates) *swap_rate
+
+    duration = numerator / denominator
+    return duration
+
 
 
 def basis_point_value(
@@ -153,12 +168,15 @@ def swap_par_rate(
     """
 
     # !!! MODIFY AS APPROPRIATE !!!
-    discount_factor_t0 = get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        fwd_start_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) if fwd_start_date is not None else None
+    if fwd_start_date is not None:
+        discount_factor_t0 = get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],
+            fwd_start_date,
+            discount_factors.index,
+            discount_factors.values,
+        )
+    else:
+        discount_factor_t0 = 1.0
 
     # !!! MODIFY AS APPROPRIATE !!!
     bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
@@ -166,7 +184,7 @@ def swap_par_rate(
         payment_date,
         discount_factors.index,
         discount_factors.values,
-    ) * year_frac_act_x(fwd_start_date, payment_date, 365) for payment_date in fixed_leg_schedule)
+    ) * year_frac_30e_360(fixed_leg_schedule[0], payment_date) for payment_date in fixed_leg_schedule[1:])
         
 
     discount_factor_tN = get_discount_factor_by_zero_rates_linear_interp(
@@ -182,7 +200,7 @@ def swap_par_rate(
 
 def swap_mtm(
     swap_rate: float,
-    fixed_leg_schedule: List[dt.datetime],
+    payments_schedule: List[dt.datetime],
     discount_factors: pd.Series,
     swap_type: SwapType = SwapType.PAYER,
 ) -> float:
@@ -201,20 +219,25 @@ def swap_mtm(
     """
 
     # Single curve framework, returns price and basis point value
-    bpv = None  # !!! MODIFY AS APPROPRIATE !!!
+    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        payment_date,
+        discount_factors.index,
+        discount_factors.values,
+    ) * year_frac_act_x(payments_schedule[0], payment_date, 365) for payment_date in payments_schedule[1:])  # We skip the settlement date
     P_term = get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
-        fixed_leg_schedule[-1],
+        payments_schedule[-1],
         discount_factors.index,
         discount_factors.values,
     )
     float_leg = 1.0 - P_term
     fixed_leg = swap_rate * bpv
 
-    if swap_type == SwapType.RECEIVER:
-        multiplier = 1
-    elif swap_type == SwapType.PAYER:
+    if swap_type == SwapType.RECEIVER: # Originally twisted values
         multiplier = -1
+    elif swap_type == SwapType.PAYER:
+        multiplier = 1
     else:
         raise ValueError("Unknown swap type.")
 
