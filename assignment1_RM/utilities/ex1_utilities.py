@@ -65,25 +65,25 @@ def swaption_price_calculator(
     d1 = (np.log(S0 / strike) + 0.5 * sigma_black**2 * ttm) / (sigma_black * np.sqrt(ttm))
     d2 = (np.log(S0 / strike) - 0.5 * sigma_black**2 * ttm) / (sigma_black * np.sqrt(ttm))
     fixed_leg_payment_dates = date_series(expiry, underlying_expiry, freq)
-    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        payment_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) * year_frac_30e_360(ref_date, payment_date) for payment_date in fixed_leg_payment_dates)
+    bpv = basis_point_value(fixed_leg_payment_dates[1:], discount_factors, expiry)
+    discount_factor_tn = get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],
+            expiry,
+            discount_factors.index,
+            discount_factors.values) # discount factor at swaption expiry, used to discount the swaption payoff back to the value date
 
     # the PAYER and RECEIVER swaption price formulas were inverted
     if swaption_type == SwapType.RECEIVER:
-        price = bpv * (strike * norm.cdf(-d2) - S0 * norm.cdf(-d1))
-        delta = bpv * (norm.cdf(d1) - 1)
+        price = discount_factor_tn * bpv * (strike * norm.cdf(-d2) - S0 * norm.cdf(-d1))
+        delta = discount_factor_tn * bpv * (norm.cdf(d1) - 1)
     elif swaption_type == SwapType.PAYER:
-        price = bpv * (S0 * norm.cdf(d1) - strike * norm.cdf(d2))
-        delta = bpv * norm.cdf(d1)
+        price = discount_factor_tn * bpv * (S0 * norm.cdf(d1) - strike * norm.cdf(d2))
+        delta = discount_factor_tn * bpv * norm.cdf(d1)
+        
     else:
         raise ValueError("Invalid swaption type.")
 
     if compute_delta:
-        delta = bpv * norm.cdf(d1) 
         return price, delta
     else:
         return price
@@ -109,12 +109,7 @@ def irs_proxy_duration(
         (float): Swap duration.
     """
 
-    numerator = sum( get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        payment_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) * year_frac_30e_360(ref_date, payment_date) for payment_date in fixed_leg_payment_dates) * swap_rate
+    numerator = basis_point_value(fixed_leg_payment_dates, discount_factors,ref_date) * swap_rate
 
     denominator = sum( get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
@@ -147,7 +142,32 @@ def basis_point_value(
     """
 
     # !!! COMPLETE AS APPROPRIATE !!!
-    pass
+    if settlement_date is not None:
+        discount_factor_tn = get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],
+            settlement_date,
+            discount_factors.index,
+            discount_factors.values,
+        )
+        bpv = year_frac_30e_360(settlement_date, fixed_leg_schedule[0]) * get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],  fixed_leg_schedule[0], discount_factors.index, discount_factors.values) / discount_factor_tn
+    
+        bpv +=sum( year_frac_30e_360(fixed_leg_schedule[i], fixed_leg_schedule[i+1]) 
+            * get_discount_factor_by_zero_rates_linear_interp(discount_factors.index[0],fixed_leg_schedule[i+1],discount_factors.index,discount_factors.values)for i in range(len(fixed_leg_schedule)-1)
+        ) / discount_factor_tn
+
+    else:
+        settlement_date = dt.date(2008,2,15) # hard code maybe we can change it later
+
+        bpv = year_frac_30e_360(settlement_date, fixed_leg_schedule[0]) * get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],  fixed_leg_schedule[0], discount_factors.index, discount_factors.values)
+        
+        bpv += sum( year_frac_30e_360(fixed_leg_schedule[i], fixed_leg_schedule[i+1]) 
+            * get_discount_factor_by_zero_rates_linear_interp(discount_factors.index[0],fixed_leg_schedule[i+1],discount_factors.index,discount_factors.values)for i in range(len(fixed_leg_schedule)-1)
+        )   
+    return bpv
+
+
 
 
 def swap_par_rate(
@@ -169,32 +189,30 @@ def swap_par_rate(
     """
 
     # !!! MODIFY AS APPROPRIATE !!!
-    if fwd_start_date is not None:
-        discount_factor_t0 = get_discount_factor_by_zero_rates_linear_interp(
-            discount_factors.index[0],
-            fwd_start_date,
-            discount_factors.index,
-            discount_factors.values,
-        )
-    else:
-        discount_factor_t0 = 1.0
-
-    # !!! MODIFY AS APPROPRIATE !!!
-    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        payment_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) * year_frac_30e_360(fixed_leg_schedule[0], payment_date) for payment_date in fixed_leg_schedule[1:])
-        
-
     discount_factor_tN = get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
         fixed_leg_schedule[-1],
         discount_factors.index,
         discount_factors.values,
-    )
-    float_leg = discount_factor_t0 - discount_factor_tN
+        )
+
+    if fwd_start_date is not None:
+        discount_factor_tn = get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],
+            fwd_start_date,
+            discount_factors.index,
+            discount_factors.values,
+        )   
+
+        bpv = basis_point_value(fixed_leg_schedule, discount_factors, fwd_start_date) 
+
+        float_leg = 1.0 - (discount_factor_tN/discount_factor_tn)
+
+    else:
+
+        bpv = basis_point_value(fixed_leg_schedule, discount_factors)
+
+        float_leg = 1.0 - discount_factor_tN
 
     return float_leg / bpv
 
@@ -220,12 +238,9 @@ def swap_mtm(
     """
 
     # Single curve framework, returns price and basis point value
-    bpv = sum( get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        payment_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) * year_frac_30e_360(payments_schedule[0], payment_date) for payment_date in payments_schedule[1:])  # We skip the settlement date
+
+    bpv = basis_point_value(payments_schedule, discount_factors) # We skip the settlement date
+
     P_term = get_discount_factor_by_zero_rates_linear_interp(
         discount_factors.index[0],
         payments_schedule[-1],
