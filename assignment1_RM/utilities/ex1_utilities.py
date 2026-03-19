@@ -79,7 +79,7 @@ def swaption_price_calculator(
     elif swaption_type == SwapType.PAYER:
         price = discount_factor_tn * bpv * (S0 * norm.cdf(d1) - strike * norm.cdf(d2))
         delta = discount_factor_tn * bpv * norm.cdf(d1)
-        
+
     else:
         raise ValueError("Invalid swaption type.")
 
@@ -108,17 +108,45 @@ def irs_proxy_duration(
     Returns:
         (float): Swap duration.
     """
+    numerator = 0
+    denominator = 0
 
-    numerator = basis_point_value(fixed_leg_payment_dates, discount_factors,ref_date) * swap_rate
-
-    denominator = sum( get_discount_factor_by_zero_rates_linear_interp(
-        discount_factors.index[0],
-        payment_date,
-        discount_factors.index,
-        discount_factors.values,
-    ) for payment_date in fixed_leg_payment_dates) *swap_rate
+    for i, payment_date in enumerate(fixed_leg_payment_dates):
+        t = year_frac_30e_360(ref_date, payment_date)
+        df = get_discount_factor_by_zero_rates_linear_interp(
+            discount_factors.index[0],
+            payment_date,
+            discount_factors.index,
+            discount_factors.values,
+        )
+        
+        if i == len(fixed_leg_payment_dates) - 1:
+            cashflow = swap_rate + 1
+        else:
+            cashflow = swap_rate
+        
+        numerator += t * cashflow * df
+        denominator += cashflow * df
 
     duration = numerator / denominator
+
+    # numerator = sum( year_frac_30e_360(ref_date, payment_date) * get_discount_factor_by_zero_rates_linear_interp(
+    #     discount_factors.index[0],
+    #     payment_date,
+    #     discount_factors.index,
+    #     discount_factors.values,
+    # ) for payment_date in fixed_leg_payment_dates) *swap_rate
+
+    # denominator = sum( get_discount_factor_by_zero_rates_linear_interp(
+    #     discount_factors.index[0],
+    #     payment_date,
+    #     discount_factors.index,
+    #     discount_factors.values,
+    # ) for payment_date in fixed_leg_payment_dates) *swap_rate
+
+    # print(numerator, denominator)
+
+    # duration = numerator / denominator
     return duration
 
 
