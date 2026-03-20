@@ -130,23 +130,6 @@ def irs_proxy_duration(
 
     duration = numerator / denominator
 
-    # numerator = sum( year_frac_30e_360(ref_date, payment_date) * get_discount_factor_by_zero_rates_linear_interp(
-    #     discount_factors.index[0],
-    #     payment_date,
-    #     discount_factors.index,
-    #     discount_factors.values,
-    # ) for payment_date in fixed_leg_payment_dates) *swap_rate
-
-    # denominator = sum( get_discount_factor_by_zero_rates_linear_interp(
-    #     discount_factors.index[0],
-    #     payment_date,
-    #     discount_factors.index,
-    #     discount_factors.values,
-    # ) for payment_date in fixed_leg_payment_dates) *swap_rate
-
-    # print(numerator, denominator)
-
-    # duration = numerator / denominator
     return duration
 
 
