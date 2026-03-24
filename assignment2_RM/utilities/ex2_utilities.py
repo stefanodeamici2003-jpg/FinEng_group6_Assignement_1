@@ -153,14 +153,30 @@ def defaultable_bond_dirty_price_from_intensity(
             ]
         )
         survival_probs = pd.Series(data=survival_probs, index=cash_flows.index)
-    else:                                            # if instensity is not a float -> pd.Series -> piecewise constant
-    
-        survival_probs = None
 
-    default_probs = None
-    survival_probs_with_start = pd.concat([pd.Series([1.0]), survival_probs])
-    default_probs = survival_probs_with_start.diff(-1).dropna()
-    default_probs.index = cash_flows.index
+    else:
+        # Convert cash flow dates to year fractions
+        times = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index])
+        
+        # Extract values from your pd.Series (h_1y and h_1y2y)
+        h1 = intensity.iloc[0]
+        h2 = intensity.iloc[1]
+        t1 = intensity.index[0] # This is 1.0 (the first pillar)
+
+        # Calculate the integral manually for each cash flow time 't'
+        # If t <= t1: integral = h1 * t
+        # If t > t1:  integral = h1 * t1 + h2 * (t - t1)
+        integrals = np.where(
+            times <= t1,
+            h1 * times,
+            h1 * t1 + h2 * (times - t1)
+        )
+        
+        
+        survival_probs = pd.Series(np.exp(-integrals), index=cash_flows.index)
+            
+    surv_at_start = survival_probs.shift(1, fill_value=1.0)
+    default_probs = (surv_at_start - survival_probs).values
 
     # Calculate the dirty price
     dirty_price = (cash_flows.values * np.array(discount_factors) * survival_probs.values).sum() + (recovery_rate * notional * np.array(discount_factors) * default_probs).sum() 
