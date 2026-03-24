@@ -134,6 +134,7 @@ def defaultable_bond_dirty_price_from_intensity(
     Returns:
         float: Dirty price of the bond.
     """
+    ref_date = pd.Timestamp(ref_date)
 
     # Calculate the cash flows
     cash_flows = bond_cash_flows(
@@ -141,7 +142,7 @@ def defaultable_bond_dirty_price_from_intensity(
     )
 
     # Discount factors
-    discount_factors = None 
+    discount_factors = _df(discount_factors,cash_flows.index)
 
     # Calculate the survival probabilities and default probabilities
     if isinstance(intensity, float):                 # if intensity is a float -> constant value
@@ -157,11 +158,13 @@ def defaultable_bond_dirty_price_from_intensity(
         survival_probs = None
 
     default_probs = None
+    survival_probs_with_start = pd.concat([pd.Series([1.0]), survival_probs])
+    default_probs = survival_probs_with_start.diff(-1).dropna()
+    default_probs.index = cash_flows.index
 
     # Calculate the dirty price
-    dirty_price = None
-    return 
-
+    dirty_price = (cash_flows.values * np.array(discount_factors) * survival_probs.values).sum() + (recovery_rate * notional * np.array(discount_factors) * default_probs).sum() 
+    return dirty_price
 
 def defaultable_bond_dirty_price_from_z_spread(
     ref_date: Union[dt.date, pd.Timestamp],
@@ -190,26 +193,20 @@ def defaultable_bond_dirty_price_from_z_spread(
         float: Dirty price of the bond.
     """
 
-    # Payment dates
-    cash_flows_dates = bond_payment_dates(issue_date, maturity, coupon_freq)
+    ref_date = pd.Timestamp(ref_date)
 
     # Calculate the cash flows
     cash_flows = bond_cash_flows(
         ref_date, issue_date, maturity, coupon_rate, coupon_freq, notional
     )
 
-    # Interpoler les DFs de base aux dates de paiement
-    base_dfs = np.array([_df(discount_factors, pd.Timestamp(d)) for d in cash_flows_dates])
+    # Discount factors with z-spread
 
-    # Year fractions pour le z-spread
-    year_fracs = np.array([
-        year_frac_act_x(pd.Timestamp(ref_date), pd.Timestamp(d), 365)
-        for d in cash_flows_dates
-    ])
-
-    # Appliquer le z-spread : DF_z(t) = DF(t) * exp(-z * T)
+    base_dfs = np.array([_df(discount_factors, d) for d in cash_flows.index])
+    year_fracs = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index])
     discount_factors_z = base_dfs * np.exp(-z_spread * year_fracs)
 
-    # Prix sale = Σ CF_i * DF_z(t_i)
+    # Calculate the dirty price
     dirty_price = (cash_flows.values * discount_factors_z).sum()
     return dirty_price
+
