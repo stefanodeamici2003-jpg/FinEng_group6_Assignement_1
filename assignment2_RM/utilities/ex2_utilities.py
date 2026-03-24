@@ -17,6 +17,9 @@ from utilities.ex0_utilities import (
     get_discount_factor_by_zero_rates_linear_interp,
 )
 
+from utilities.ex1_utilities import (
+    _df)
+
 
 def bond_payment_dates(
     issue_date: Union[dt.date, pd.Timestamp], maturity: int, coupon_freq: int
@@ -39,6 +42,8 @@ def bond_payment_dates(
         payment_dt = business_date_offset(
             issue_date, month_offset=(12 // coupon_freq) * counter
         )
+        payment_dates.append(payment_dt)
+        
         # Complete #
 
         counter += 1
@@ -73,17 +78,19 @@ def bond_cash_flows(
 
     # Payment dates
     cash_flows_dates = bond_payment_dates(issue_date, maturity, coupon_freq)
-
+    print("cash flows dates:", cash_flows_dates)
     # Coupon payments
     dates = [ref_date] + cash_flows_dates
+    print(dates)
     cash_flows = pd.Series(
         data=[
-             coupon_rate
-            for i in range(1, len(dates))  # Complete
+             coupon_rate * year_frac_30e_360(dates[i - 1], dates[i])
+            for i in range(1, len(dates))    
+              # Complete
         ],
         index=cash_flows_dates,
     )
-
+    print("cash_flows:", cash_flows)
     # Notional payment
     cash_flows[cash_flows_dates[-1]] += notional
 
@@ -175,14 +182,18 @@ def defaultable_bond_dirty_price_from_z_spread(
         float: Dirty price of the bond.
     """
 
+    # Payment dates
+    cash_flows_dates = bond_payment_dates(issue_date, maturity, coupon_freq)
+    print("cash flows dates:", cash_flows_dates)
     # Calculate the cash flows
     cash_flows = bond_cash_flows(
         ref_date, issue_date, maturity, coupon_rate, coupon_freq, notional
     )
-
+    print("cash_flows:", cash_flows)
     # Discount factors with z-spread
-    discount_factors = None
+    discount_factors = _df(discount_factors,cash_flows_dates)
+    discount_factors = discount_factors .* np.exp(-z_spread * year_frac_act_x(ref_date, discount_factors.index, 365))
 
     # Calculate the dirty price
-    dirty_price = None
+    dirty_price = cash_flows * discount_factors
     return 
