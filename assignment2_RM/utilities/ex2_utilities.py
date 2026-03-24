@@ -17,9 +17,20 @@ from utilities.ex0_utilities import (
     get_discount_factor_by_zero_rates_linear_interp,
 )
 
-from utilities.ex1_utilities import (
-    _df)
-
+# from utilities.ex1_utilities import (
+#     _df,
+#     )
+def _df(
+    discount_factors: pd.Series,
+    date: Union[dt.date, pd.Timestamp],
+) -> float:
+    """Thin wrapper around the linear-interpolation discount-factor lookup."""
+    return get_discount_factor_by_zero_rates_linear_interp(
+        discount_factors.index[0],
+        date,
+        discount_factors.index,
+        discount_factors.values,
+    )
 
 def bond_payment_dates(
     issue_date: Union[dt.date, pd.Timestamp], maturity: int, coupon_freq: int
@@ -42,7 +53,7 @@ def bond_payment_dates(
         payment_dt = business_date_offset(
             issue_date, month_offset=(12 // coupon_freq) * counter
         )
-        payment_dates.append(payment_dt)
+        payment_dates.append(pd.Timestamp(payment_dt))
         
         # Complete #
 
@@ -78,10 +89,8 @@ def bond_cash_flows(
 
     # Payment dates
     cash_flows_dates = bond_payment_dates(issue_date, maturity, coupon_freq)
-    print("cash flows dates:", cash_flows_dates)
     # Coupon payments
     dates = [ref_date] + cash_flows_dates
-    print(dates)
     cash_flows = pd.Series(
         data=[
              coupon_rate * year_frac_30e_360(dates[i - 1], dates[i])
@@ -90,7 +99,6 @@ def bond_cash_flows(
         ],
         index=cash_flows_dates,
     )
-    print("cash_flows:", cash_flows)
     # Notional payment
     cash_flows[cash_flows_dates[-1]] += notional
 
@@ -184,16 +192,24 @@ def defaultable_bond_dirty_price_from_z_spread(
 
     # Payment dates
     cash_flows_dates = bond_payment_dates(issue_date, maturity, coupon_freq)
-    print("cash flows dates:", cash_flows_dates)
+
     # Calculate the cash flows
     cash_flows = bond_cash_flows(
         ref_date, issue_date, maturity, coupon_rate, coupon_freq, notional
     )
-    print("cash_flows:", cash_flows)
-    # Discount factors with z-spread
-    discount_factors = _df(discount_factors,cash_flows_dates)
-    discount_factors = discount_factors .* np.exp(-z_spread * year_frac_act_x(ref_date, discount_factors.index, 365))
 
-    # Calculate the dirty price
-    dirty_price = cash_flows * discount_factors
-    return 
+    # Interpoler les DFs de base aux dates de paiement
+    base_dfs = np.array([_df(discount_factors, pd.Timestamp(d)) for d in cash_flows_dates])
+
+    # Year fractions pour le z-spread
+    year_fracs = np.array([
+        year_frac_act_x(pd.Timestamp(ref_date), pd.Timestamp(d), 365)
+        for d in cash_flows_dates
+    ])
+
+    # Appliquer le z-spread : DF_z(t) = DF(t) * exp(-z * T)
+    discount_factors_z = base_dfs * np.exp(-z_spread * year_fracs)
+
+    # Prix sale = Σ CF_i * DF_z(t_i)
+    dirty_price = (cash_flows.values * discount_factors_z).sum()
+    return dirty_price
