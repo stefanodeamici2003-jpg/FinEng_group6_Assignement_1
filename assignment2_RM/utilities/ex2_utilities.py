@@ -145,14 +145,15 @@ def defaultable_bond_dirty_price_from_intensity(
     discount_factors = _df(discount_factors,cash_flows.index)
 
     # Calculate the survival probabilities and default probabilities
-    if isinstance(intensity, float):                 # if intensity is a float -> constant value
-        survival_probs = np.exp(
+    if not isinstance(intensity, pd.Series):
+         intensity = float(intensity)                 # if intensity is a float -> constant value
+         survival_probs = np.exp(
             [
                 -intensity * year_frac_act_x(ref_date, date, 365)
                 for date in cash_flows.index
             ]
         )
-        survival_probs = pd.Series(data=survival_probs, index=cash_flows.index)
+         survival_probs = pd.Series(data=survival_probs, index=cash_flows.index)
 
     else:
         # Convert cash flow dates to year fractions
