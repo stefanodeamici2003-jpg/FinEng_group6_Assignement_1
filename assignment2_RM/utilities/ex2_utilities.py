@@ -17,9 +17,6 @@ from utilities.ex0_utilities import (
     get_discount_factor_by_zero_rates_linear_interp,
 )
 
-# from utilities.ex1_utilities import (
-#     _df,
-#     )
 def _df(
     discount_factors: pd.Series,
     date: Union[dt.date, pd.Timestamp],
@@ -136,54 +133,30 @@ def defaultable_bond_dirty_price_from_intensity(
     """
     ref_date = pd.Timestamp(ref_date)
 
-    # Calculate the cash flows
-    cash_flows = bond_cash_flows(
-        ref_date, issue_date, maturity, coupon_rate, coupon_freq, notional
-    )
+    cash_flows = bond_cash_flows(ref_date, issue_date, maturity, coupon_rate, coupon_freq, notional)    
+    # Discount factors from zero rate interpolation
+    dfs   = np.array([_df(discount_factors, d) for d in cash_flows.index])
 
-    # Discount factors
-    cf_dates = pd.to_datetime(cash_flows.index)
-    discount_factors.index = pd.to_datetime(discount_factors.index)
-    discount_factors = discount_factors.reindex(cf_dates, method='nearest')
-
-    # Calculate the survival probabilities and default probabilities
+    # Computation of the integral
+    cash_flows_dates = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index]) # act/365
+    
     if not isinstance(intensity, pd.Series):
-         intensity = float(intensity)                 # if intensity is a float -> constant value
-         survival_probs = np.exp(
-            [
-                -intensity * year_frac_act_x(ref_date, date, 365)
-                for date in cash_flows.index
-            ]
-        )
-         survival_probs = pd.Series(data=survival_probs, index=cash_flows.index)
-
+        integral = float(np.squeeze(intensity)) * cash_flows_dates
+    
     else:
-        # Convert cash flow dates to year fractions
-        times = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index])
-        
-        # Extract values from your pd.Series (h_1y and h_1y2y)
-        h1 = intensity.iloc[0]
-        h2 = intensity.iloc[1]
-        t1 = intensity.index[0] # This is 1.0 (the first pillar)
+        h1, h2 = intensity.iloc[0], intensity.iloc[1]
+        t1 = intensity.index[0]
+        integral = np.where(cash_flows_dates <= t1, h1 * cash_flows_dates, h1 * t1 + h2 * (cash_flows_dates - t1))
 
-        # Calculate the integral manually for each cash flow time 't'
-        # If t <= t1: integral = h1 * t
-        # If t > t1:  integral = h1 * t1 + h2 * (t - t1)
-        integrals = np.where(
-            times <= t1,
-            h1 * times,
-            h1 * t1 + h2 * (times - t1)
-        )
-        
-        
-        survival_probs = pd.Series(np.exp(-integrals), index=cash_flows.index)
-            
-    surv_at_start = survival_probs.shift(1, fill_value=1.0)
-    default_probs = (surv_at_start - survival_probs).values
+    survival_probs = np.exp(-integral)
 
-    # Calculate the dirty price
-    dirty_price = (cash_flows.values * np.array(discount_factors) * survival_probs.values).sum() + (recovery_rate * notional * np.array(discount_factors) * default_probs).sum() 
-    return dirty_price
+    surv_at_start = np.concatenate([[1.0], survival_probs[:-1]])
+    default_probs = surv_at_start - survival_probs
+
+    pv_coupons  = (cash_flows.values * dfs * survival_probs).sum()
+    pv_recovery = (recovery_rate * notional * dfs * default_probs).sum()
+
+    return pv_coupons + pv_recovery
 
 def defaultable_bond_dirty_price_from_z_spread(
     ref_date: Union[dt.date, pd.Timestamp],
@@ -220,12 +193,12 @@ def defaultable_bond_dirty_price_from_z_spread(
     )
 
     # Discount factors with z-spread
-
-    base_dfs = np.array([_df(discount_factors, d) for d in cash_flows.index])
+    dfs = np.array([_df(discount_factors, d) for d in cash_flows.index])
     year_fracs = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index])
-    discount_factors_z = base_dfs * np.exp(-z_spread * year_fracs)
+    discount_factors_z = dfs * np.exp(-z_spread * year_fracs)
 
     # Calculate the dirty price
     dirty_price = (cash_flows.values * discount_factors_z).sum()
+    
     return dirty_price
 
