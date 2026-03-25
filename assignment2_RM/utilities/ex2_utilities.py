@@ -142,7 +142,9 @@ def defaultable_bond_dirty_price_from_intensity(
     )
 
     # Discount factors
-    discount_factors = _df(discount_factors,cash_flows.index)
+    cf_dates = pd.to_datetime(cash_flows.index)
+    discount_factors.index = pd.to_datetime(discount_factors.index)
+    discount_factors = discount_factors.reindex(cf_dates, method='nearest')
 
     # Calculate the survival probabilities and default probabilities
     if not isinstance(intensity, pd.Series):
