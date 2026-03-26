@@ -90,7 +90,7 @@ def bond_cash_flows(
     dates = [ref_date] + cash_flows_dates
     cash_flows = pd.Series(
         data=[
-             coupon_rate * year_frac_30e_360(dates[i - 1], dates[i])
+             coupon_rate/100 * notional * year_frac_30e_360(dates[i - 1], dates[i])
             for i in range(1, len(dates))    
               # Complete
         ],
@@ -100,6 +100,7 @@ def bond_cash_flows(
     cash_flows[cash_flows_dates[-1]] += notional
 
     return cash_flows
+
 
 
 def defaultable_bond_dirty_price_from_intensity(
@@ -138,15 +139,15 @@ def defaultable_bond_dirty_price_from_intensity(
     dfs   = np.array([_df(discount_factors, d) for d in cash_flows.index])
 
     # Computation of the integral
-    cash_flows_dates = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index]) # act/365
+    year_fracs = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index]) # act/365 (as for rate)
     
-    if not isinstance(intensity, pd.Series):
-        integral = float(np.squeeze(intensity)) * cash_flows_dates
+    if isinstance(intensity, float):
+        integral = intensity * year_fracs
     
     else:
         h1, h2 = intensity.iloc[0], intensity.iloc[1]
         t1 = intensity.index[0]
-        integral = np.where(cash_flows_dates <= t1, h1 * cash_flows_dates, h1 * t1 + h2 * (cash_flows_dates - t1))
+        integral = np.where(year_fracs <= t1, h1 * year_fracs, h1 * t1 + h2 * (year_fracs - t1))
 
     survival_probs = np.exp(-integral)
 
@@ -194,11 +195,12 @@ def defaultable_bond_dirty_price_from_z_spread(
 
     # Discount factors with z-spread
     dfs = np.array([_df(discount_factors, d) for d in cash_flows.index])
-    year_fracs = np.array([year_frac_act_x(ref_date, d, 365) for d in cash_flows.index])
+    year_fracs = np.array([year_frac_30e_360(ref_date, d) for d in cash_flows.index]) # 30E/360 (corporate bonds convention)
     discount_factors_z = dfs * np.exp(-z_spread * year_fracs)
 
     # Calculate the dirty price
     dirty_price = (cash_flows.values * discount_factors_z).sum()
     
     return dirty_price
+
 
