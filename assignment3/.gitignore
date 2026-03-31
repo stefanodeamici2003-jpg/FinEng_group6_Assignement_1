@@ -1,0 +1,32 @@
+# --- MATLAB Specific ---
+
+# File di salvataggio automatico (Autosave)
+*.asv
+
+# File binari compilati (MEX) - Dipendono dal PC, non vanno su Git
+*.mex*
+
+# Cache di Simulink e file di progetto
+slprj/
+*.slxc
+*.slx.autosave
+
+# Cartelle di generazione codice
+codegen/
+
+# Backup di App Designer
+*.mlapp.bak
+
+# File di dati del profiler e log di Java
+*.mldatx
+java.log.*
+
+# Impostazioni locali del desktop e del workspace
+.matlab/
+matlab.settings
+Release/
+Debug/
+
+# File temporanei di MATLAB (spesso creati durante le simulazioni)
+*.log
+*.tmp
