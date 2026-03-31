@@ -1,4 +1,4 @@
-function [values date CompleteName]=findSeries(equityData,assetName,formatDate)
+function [values, date, CompleteName]=findSeries(equityData,assetName,formatDate)
 % [values date CompleteName]=findSeries(equityData,assetName)
 %
 % Finds an asset in a data-struct 

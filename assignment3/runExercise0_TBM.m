@@ -21,23 +21,25 @@ formatDate = 'mm/dd/yyyy';
 alpha=0.95;
 
 % Input parameters
-refDate=datenum('10 Jul 12');
+refDate=datenum('Jul 24 12');
 NumberOfYears=2;
 timeWindow = 12*NumberOfYears;
-sharesList=cellstr(['AXA     '; 'ENI     '; 'Bayer   ']); 
+sharesList=cellstr({'Inditex'; 'BASF'; 'LVMH'}); 
 numberAssets = size(sharesList,1);
 weights=(1/numberAssets)*ones(numberAssets,1);
 
 %% Select returns of interest
 [tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, timeWindow, sharesList, formatDate);
+returnsSelected;
 
 %% Compute Risk Measurements
 
 % Analytic VaR & ES (Normal)
 % It computes mean and VarCovar on the proper time scale
-
+portfolioValue = 1e7;
+riskMeasureTimeIntervalInDays = 1;
 try
-    [ES, VaR] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returns); 
+    [ES, VaR] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returnsSelected); 
 catch err
     err.message
 end
