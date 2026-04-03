@@ -9,7 +9,7 @@ function VaR = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, ...
 % alpha  -> confidence level 
 % numberOfShares -> number of shares in the portfolio
 % numberOfPuts   -> number of put options (same underlying)
-% stockPrice     -> current stock price (S0)
+% stockPrice     -> current stock price
 % strike         -> strike of the put option
 % rate           -> risk-free rate (annual, scalar)
 % dividendYield  -> dividend yield (annual)
@@ -21,19 +21,17 @@ function VaR = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, ...
 % OUTPUT:
 % VaR -> Value at Risk at level alpha
 
-% STEP 0: Initial portfolio value
-
+%Initial portfolio value
 [~, putPrice0] = blsprice(stockPrice, strike, rate, TTMinYears, volatility, dividendYield);
-
 V0 = numberOfShares * stockPrice + numberOfPuts * putPrice0;
 
-% STEP 1: Adjust time to maturity after one day
-TTM_new = TTMinYears - riskMeasureTimeIntervalInDays/365;
+%Adjust time to maturity after one day
+TTM_new = TTMinYears - riskMeasureTimeIntervalInDays/365; 
 
-% STEP 2: Vectorized Monte Carlo simulation
+%Vectorized Monte Carlo simulation
 %Simulate next-day stock prices
 % Each historical return generates one scenario
-S_new = stockPrice * (1 + returns);   % (nScenarios x 1 vector)
+S_new = stockPrice * exp(returns);   %returns are log
 
 % Reprice the put option
 % blsprice works element-wise on vectors of underlying prices
@@ -46,9 +44,7 @@ V_new = numberOfShares * S_new + numberOfPuts * putPrices;
 % Compute Profit & Loss
 PnL = V_new - V0;   % (nScenarios x 1 vector)
 
-% STEP 3: Compute VaR
-
-% VaR is the negative of the (1-alpha) quantile of the PnL distribution
+%Compute VaR
 VaR = -quantile(PnL, 1 - alpha);
-
+fprintf('The Monte Carlo VaR at %.0f%% confidence level (based on %d scenarios) is: %.4f\n', alpha*100, length(returns), VaR);
 end
