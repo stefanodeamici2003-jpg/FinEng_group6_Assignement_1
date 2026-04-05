@@ -39,18 +39,122 @@ returnsSelected;
 portfolioValue = 1e7;
 riskMeasureTimeIntervalInDays = 1;
 try
-    [ES, VaR] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returnsSelected); 
+    [ES_PCA, VaR] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returnsSelected); 
 catch err
     err.message
 end
 
+%% Historical Simulation - Ptf1
+sharesListPtf1 = {'ENI'; 'Telefonica'; 'EON'; 'Daimler'}; 
+absQuantities = [18e3; 25e3; 15e3; 9e3];
+alpha = 0.99;
+riskMeasureTimeIntervalInDays_Ptf1 = 1;
 
-%% Historical Simulation
-% TBC
+% Extraction of today's prices
+[tSelected, returnsSelected1] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf1, formatDate);
+[shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
+currentPrices = zeros(length(sharesListPtf1), 1);
+for i = 1:length(sharesListPtf1)
+    bbgCode = underlyingCode(sharesListPtf1{i});
+    [val, t_val] = findSeries(shareData, bbgCode, formatDate);
+    idx = find(t_val <= datenum(refDate));
+    currentPrices(i) = val(idx(end)); 
+end
 
+% Calculation of Ptf weights
+portfolioValuePtf1 = sum(absQuantities .* currentPrices);
+weightsPtf1 = (absQuantities .* currentPrices) / portfolioValuePtf1;
+
+[ES_HS_Ptf1, VaR_HS_Ptf1] = HSMeasures(alpha, weightsPtf1, portfolioValuePtf1, riskMeasureTimeIntervalInDays_Ptf1, returnsSelected1);
+
+%% Bootstrap Method - Ptf1
+rng(1);
+M = 200;
+num_days = size(returnsSelected1, 1);
+
+% x is just a dummy variable so that arrayfun can work with the function
+% handle. We extract the same day for each Asset to preserve correlation.
+single_boot_step = @(x) HSMeasures(alpha, ...
+                                   weightsPtf1, ...
+                                   portfolioValuePtf1, ...
+                                   riskMeasureTimeIntervalInDays, ...
+                                   returnsSelected1(randi(num_days, num_days, 1), :));
+
+[boot_ES_array, boot_VaR_array] = arrayfun(single_boot_step, 1:M);
+
+VaR_BS_Ptf1 = mean(boot_VaR_array);
+ES_BS_Ptf1 = mean(boot_ES_array);
+
+fprintf('Historical Simulation VaR: %f\n', VaR_HS_Ptf1);
+fprintf('Bootstrap VaR (200 sim): %f\n', VaR_BS_Ptf1);
+
+%% Weighted Historical Simulation - Ptf2
+sharesListPtf2 = {'Vivendi'; 'AXA'; 'ENEL'; 'Volkswagen'; 'Schneider'}; 
+lambda = 0.98;
+riskMeasureTimeIntervalInDays_Ptf2 = 1;
+
+% Extraction of today's prices
+[tSelected, returnsSelected2] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf2, formatDate);
+[shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
+%{
+currentPrices = zeros(length(sharesListPtf2), 1);
+for i = 1:length(sharesListPtf2)
+    bbgCode = underlyingCode(sharesListPtf2{i});
+    [val, t_val] = findSeries(shareData, bbgCode, formatDate);
+    idx = find(t_val <= datenum(refDate));
+    currentPrices(i) = val(idx(end)); 
+end
+%}
+% Calculation of Ptf weights
+weightsPtf2 = ones(length(sharesListPtf2),1)/length(sharesListPtf2);
+
+portfolioValuePtf2 = 1;
+[ES_WHS_Ptf2, VaR_WHS_Ptf2] = WHSMeasures(alpha, lambda, weightsPtf2, portfolioValuePtf2, riskMeasureTimeIntervalInDays_Ptf2, returnsSelected2);
+
+%% Gaussian parametric PCA - Ptf3
+sharesListPtf3 = {'AirLiquide';'Allianz';'InBev';'Arcelor';'ASML';'Generali';'AXA';'BBVA';'Santander';'BASF';'Bayer';'BMW';'BNP';'Carrefour';'StGobain';'CRH';'Daimler';'Danone';'DB';'DT';'EON';'ENEL';'ENI';'Essilor';'FT'}; % Extraction of the first 25 Assets
+riskMeasureTimeIntervalInDays_Ptf3 = 10;
+portfolioValuePtf3 = 15e6; % Notional €15 Mln
+
+[tSelected, returnsSelected3] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf3, formatDate);
+
+% Calculation of Equally weighted Ptf
+weightsPtf3 = ones(length(sharesListPtf3),1)/length(sharesListPtf3);
+
+% Calculation of full Gaussian approach VaR:
+sigma = cov(returnsSelected3);
+z = norminv(alpha);
+stdDev_full = sqrt(weightsPtf3' * sigma * weightsPtf3);
+VaR_full = z * stdDev_full * sqrt(riskMeasureTimeIntervalInDays_Ptf3) * portfolioValuePtf3;
+
+% Preallocate usefull variables
+n_5_percent = 0; n_1_percent = 0;
+ES_PCA_5_percent = 0; ES_PCA_1_percent = 0;
+VaR_PCA_5_percent = 0; VaR_PCA_1_percent = 0;
+
+for k = 1:length(sharesListPtf3)
+    [ES_PCA, VaR_PCA] = PCAMeasures(alpha, k, weightsPtf3, portfolioValuePtf3, riskMeasureTimeIntervalInDays_Ptf3, returnsSelected3);
+    error_pca = (VaR_full - VaR_PCA) / VaR_full;
+    
+    if error_pca <= 0.05 && n_5_percent == 0
+        n_5_percent = k; ES_PCA_5_percent = ES_PCA; VaR_PCA_5_percent = VaR_PCA;
+    end
+    
+    if error_pca <= 0.01 && n_1_percent == 0
+        n_1_percent = k; ES_PCA_1_percent = ES_PCA; VaR_PCA_1_percent = VaR_PCA;
+    end
+end
+VaR_PCA_1_percent
+fprintf('Min PC for <5%% error: %d\n', n_5_percent);
+fprintf('Min PC for <1%% error: %d\n', n_1_percent);
 %% Plausibility Check
-% TBC
+VaR_plausible_Ptf1 = PlausibilityCheckVaR(alpha, weightsPtf1, portfolioValuePtf1, riskMeasureTimeIntervalInDays_Ptf1, returnsSelected1);
+VaR_plausible_Ptf2 = PlausibilityCheckVaR(alpha, weightsPtf2, portfolioValuePtf2, riskMeasureTimeIntervalInDays_Ptf2, returnsSelected2);
+VaR_plausible_Ptf3 = PlausibilityCheckVaR(alpha, weightsPtf3, portfolioValuePtf3, riskMeasureTimeIntervalInDays_Ptf3, returnsSelected3);
 
+fprintf('Plausibility VaR Ptf1 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf1, VaR_plausible_Ptf1);
+fprintf('Plausibility VaR Ptf2 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf2, VaR_plausible_Ptf2);
+fprintf('Plausibility VaR Ptf3 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf3, VaR_plausible_Ptf3);
 %% Es2 
 inputFile = 'sx5e_historical_data.xls';
 refDate = datenum('15 Feb 08');   %we start taking values from here
@@ -59,7 +163,7 @@ NumberOfYears=2;
 timeWindow = 12*NumberOfYears;
 shares=cellstr('Generali'); 
 formatDate = 'dd/mm/yyyy';   %modified
-[tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, timeWindow, shares, formatDate); %get returns  
+[tSelected, returnsSelected3] = returnsOfInterest(inputFile, refDate, timeWindow, shares, formatDate); %get returns  
 costOfShares = 1164000;
 [shareData.num,shareData.cell]=xlsread(inputFile,'Data','a5:cx1295');
 [values_G, dates_G] = findSeries(shareData,underlyingCode('Generali'), formatDate);
@@ -78,5 +182,5 @@ riskMeasureTimeIntervalInDays = 1;
 [dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet);
 idx = find(dates <= valuationDate, 1, 'last');
 rate = zeroRates(idx);
-VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected); 
-VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
+VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected3); 
+VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected3);
