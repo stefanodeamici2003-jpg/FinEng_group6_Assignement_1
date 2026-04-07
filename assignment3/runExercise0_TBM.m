@@ -215,3 +215,87 @@ fprintf('==================================================\n');
 fprintf(' Delta Normal VaR     (99%%, 1 Day) : %15.2f EUR\n', VaR_DeltaNormal);
 fprintf(' Full Monte Carlo VaR (99%%, 1 Day) : %15.2f EUR\n', VaR_FullMonteCarlo);
 fprintf('==================================================\n\n');
+
+%% MBS Pricing - Mezzanine Tranche
+% Parameters
+p    = 0.05;
+rho  = 0.40;
+R    = 0.20;
+Kd   = 0.05;
+Ku   = 0.09;
+LGD  = 1 - R;
+
+% Grid for integration over the common factor Y ~ N(0,1)
+y    = linspace(-6, 6, 2000);
+dy   = y(2) - y(1);
+phiY = normpdf(y);
+
+% Conditional default probability given Y
+c    = norminv(p);
+pY   = normcdf((c - sqrt(rho)*y) / sqrt(1-rho));
+
+%% 1. LHP Solution
+lossY_LHP       = pY * LGD;
+trancheLoss_LHP = min(max(lossY_LHP - Kd, 0), Ku - Kd);
+EL_LHP          = sum(trancheLoss_LHP .* phiY) * dy;
+price_LHP       = (1 - EL_LHP / (Ku - Kd)) * 100;
+
+%% 2. Exact Solution (finite I)
+I_exact     = [10, 20, 30, 50, 75, 100, 150, 200, 400, 600, 1000, 2000, 5000];
+price_exact = zeros(size(I_exact));
+
+for idx = 1:length(I_exact)
+    I  = I_exact(idx);
+    EL = 0;
+    for k = 0:I
+        lf = k/I * LGD;
+        tl = min(max(lf - Kd, 0), Ku - Kd);
+        if tl == 0, continue; end
+        % Integrate over Y
+        prob_k = sum(binopdf(k, I, pY) .* phiY) * dy;
+        EL = EL + tl * prob_k;
+    end
+    price_exact(idx) = (1 - EL / (Ku - Kd)) * 100;
+    fprintf('I=%d, price=%.4f%%\n', I, price_exact(idx));
+end
+
+% 3. KL (Beta) Approximation
+mu_ell = p * LGD;
+
+% E[pY^2] for systematic variance — integrated over Y
+Ep2    = sum(pY.^2 .* phiY) * dy;
+var_sys = LGD^2 * (Ep2 - p^2);
+
+I_kl      = unique(round(logspace(1, log10(2e4), 80)));
+price_kl  = zeros(size(I_kl));
+
+for idx = 1:length(I_kl)
+    I        = I_kl(idx);
+    var_idio = LGD^2 * p*(1-p) / I;
+    var_ell  = var_sys + var_idio;
+
+    alpha_b  = mu_ell * (mu_ell*(1-mu_ell)/var_ell - 1);
+    beta_b   = (1-mu_ell) * (mu_ell*(1-mu_ell)/var_ell - 1);
+
+    if alpha_b <= 0 || beta_b <= 0
+        price_kl(idx) = price_LHP;
+        continue;
+    end
+
+    EL_kl       = integral(@(x) min(max(x - Kd, 0), Ku - Kd) ...
+                    .* betapdf(x, alpha_b, beta_b), 0, 1, 'RelTol', 1e-6);
+    price_kl(idx) = (1 - EL_kl / (Ku - Kd)) * 100;
+end
+
+%% ---- Plot ----
+figure;
+semilogx(I_kl,    price_kl,    'b-',  'LineWidth', 2); hold on;
+semilogx(I_exact, price_exact, 'ro',  'MarkerSize', 6, 'LineWidth', 1.5);
+yline(price_LHP, 'k--', 'LineWidth', 2);
+xlabel('Number of obligors I (log scale)');
+ylabel('Tranche Price (% of face value)');
+title('Mezzanine Tranche Price vs. I — Vasicek Model');
+legend('KL (Beta) Approximation', 'Exact Solution', 'LHP Limit', 'Location', 'southeast');
+grid on;
+xlim([10, 2e4]);
+
