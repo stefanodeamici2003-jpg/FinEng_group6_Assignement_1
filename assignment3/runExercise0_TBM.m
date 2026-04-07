@@ -181,14 +181,12 @@ fprintf(' Ptf1 Plausible VaR (99%%,  1 Day) : %15.2f EUR\n', VaR_plausible_Ptf1)
 fprintf(' Ptf2 Plausible VaR (99%%,  1 Day) : %15.6f (Relative)\n', VaR_plausible_Ptf2);
 fprintf(' Ptf3 Plausible VaR (99%%, 10 Days): %15.2f EUR\n', VaR_plausible_Ptf3);
 %% Es2 
-inputFile = 'sx5e_historical_data.xls';
-refDate = datenum('15 Feb 08');   %we start taking values from here
 valuationDate = datenum('15 Feb 10');  
-NumberOfYears=2;
+NumberOfYears=-2;
 timeWindow = 12*NumberOfYears;
 shares=cellstr('Generali'); 
 formatDate = 'dd/mm/yyyy';   %modified
-[tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, timeWindow, shares, formatDate); %get returns  
+[tSelected, returnsSelected] = returnsOfInterest(inputFile, valuationDate, timeWindow, shares, formatDate); %get returns  
 costOfShares = 1164000;
 [shareData.num,shareData.cell]=xlsread(inputFile,'Data','a5:cx1295');
 [values_G, dates_G] = findSeries(shareData,underlyingCode('Generali'), formatDate);
@@ -208,12 +206,14 @@ riskMeasureTimeIntervalInDays = 1;
 idx = find(dates <= valuationDate, 1, 'last');
 rate = zeroRates(idx);
 VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected); 
-VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
+VaR_DeltaNormal = DeltaNormalVaRV2(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
+VaR_DeltaGammaNormal = DeltaGammaNormalVaRV2(alpha, numberOfShares, numberOfPuts,stockPrice, strike, rate, dividendYield, volatility, TTMinYears,riskMeasureTimeIntervalInDays, returnsSelected);
 fprintf('\n==================================================\n');
 fprintf(' EXERCISE 2: FULL MONTE CARLO & DELTA NORMAL\n');
 fprintf('==================================================\n');
-fprintf(' Delta Normal VaR     (99%%, 1 Day) : %15.2f EUR\n', VaR_DeltaNormal);
 fprintf(' Full Monte Carlo VaR (99%%, 1 Day) : %15.2f EUR\n', VaR_FullMonteCarlo);
+fprintf(' Delta Normal VaR     (99%%, 1 Day) : %15.2f EUR\n', VaR_DeltaNormal);
+fprintf(' Delta Gamma Normal VaR     (99%%, 1 Day) : %15.2f EUR\n', VaR_DeltaGammaNormal);
 fprintf('==================================================\n\n');
 
 %% Exercise 4 :MBS pricing

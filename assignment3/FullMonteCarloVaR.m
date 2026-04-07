@@ -46,5 +46,5 @@ PnL = V_new - V0;   % (nScenarios x 1 vector)
 
 %Compute VaR
 VaR = -quantile(PnL, 1 - alpha);
-fprintf('The Monte Carlo VaR at %.0f%% confidence level (based on %d scenarios) is: %.4f\n', alpha*100, length(returns), VaR);
+%fprintf('The Monte Carlo VaR at %.0f%% confidence level (based on %d scenarios) is: %.4f\n', alpha*100, length(returns), VaR);
 end
