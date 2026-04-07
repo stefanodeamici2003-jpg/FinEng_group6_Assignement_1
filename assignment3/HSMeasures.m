@@ -25,7 +25,6 @@ function [ES, VaR] = HSMeasures(alpha, weights, portfolioValue, riskMeasureTimeI
     n = length(orderedLoss);
     % Taking the floor numer to be more restrictive, or one to avoid any bugs
     idx = max(1, floor(n * (1 - alpha))); 
-
     VaR = orderedLoss(idx);
     ES = mean(orderedLoss(1:idx));
 

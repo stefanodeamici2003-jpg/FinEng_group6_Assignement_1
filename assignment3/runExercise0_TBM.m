@@ -17,11 +17,11 @@ clear all;
 % File name
 inputFile = 'sx5e_historical_data.xls';
 % General parameters
-formatDate = 'mm/dd/yyyy';
+formatDate = 'dd/mm/yyyy';
 alpha=0.95;
 
 % Input parameters
-refDate=datenum('Jul 24 12');
+refDate=datenum('24 Jul 12');
 NumberOfYears=2;
 timeWindow = 12*NumberOfYears;
 sharesList=cellstr({'Inditex'; 'BASF'; 'LVMH'}); 
@@ -29,7 +29,7 @@ numberAssets = size(sharesList,1);
 weights=(1/numberAssets)*ones(numberAssets,1);
 
 %% Select returns of interest
-[tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, timeWindow, sharesList, formatDate);
+[tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, -timeWindow, sharesList, formatDate);
 returnsSelected;
 
 %% Compute Risk Measurements
@@ -43,7 +43,11 @@ try
 catch err
     err.message
 end
-
+fprintf('\n==================================================\n');
+fprintf(' EXERCISE 0: ANALYTIC NORMAL MEASURES\n');
+fprintf('==================================================\n');
+fprintf(' VaR (95%%, 1 Day) : %15.2f EUR\n', VaR);
+fprintf(' ES  (95%%, 1 Day) : %15.2f EUR\n', ES_PCA);
 %% Historical Simulation - Ptf1
 sharesListPtf1 = {'ENI'; 'Telefonica'; 'EON'; 'Daimler'}; 
 absQuantities = [18e3; 25e3; 15e3; 9e3];
@@ -51,7 +55,7 @@ alpha = 0.99;
 riskMeasureTimeIntervalInDays_Ptf1 = 1;
 
 % Extraction of today's prices
-[tSelected, returnsSelected1] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf1, formatDate);
+[tSelected, returnsSelected1] = returnsOfInterest(inputFile, refDate, -timeWindow, sharesListPtf1, formatDate);
 [shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
 currentPrices = zeros(length(sharesListPtf1), 1);
 for i = 1:length(sharesListPtf1)
@@ -85,16 +89,22 @@ single_boot_step = @(x) HSMeasures(alpha, ...
 VaR_BS_Ptf1 = mean(boot_VaR_array);
 ES_BS_Ptf1 = mean(boot_ES_array);
 
-fprintf('Historical Simulation VaR: %f\n', VaR_HS_Ptf1);
-fprintf('Bootstrap VaR (200 sim): %f\n', VaR_BS_Ptf1);
-
+fprintf('\n==================================================\n');
+fprintf(' PORTFOLIO 1: HISTORICAL SIMULATION & BOOTSTRAP\n');
+fprintf('==================================================\n');
+fprintf(' --- Historical Simulation ---\n');
+fprintf(' VaR (99%%, 1 Day) : %15.2f EUR\n', VaR_HS_Ptf1);
+fprintf(' ES  (99%%, 1 Day) : %15.2f EUR\n', ES_HS_Ptf1);
+fprintf(' --- Bootstrap (200 Simulations) ---\n');
+fprintf(' VaR (99%%, 1 Day) : %15.2f EUR\n', VaR_BS_Ptf1);
+fprintf(' ES  (99%%, 1 Day) : %15.2f EUR\n', ES_BS_Ptf1);
 %% Weighted Historical Simulation - Ptf2
 sharesListPtf2 = {'Vivendi'; 'AXA'; 'ENEL'; 'Volkswagen'; 'Schneider'}; 
 lambda = 0.98;
 riskMeasureTimeIntervalInDays_Ptf2 = 1;
 
 % Extraction of today's prices
-[tSelected, returnsSelected2] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf2, formatDate);
+[tSelected, returnsSelected2] = returnsOfInterest(inputFile, refDate, -timeWindow, sharesListPtf2, formatDate);
 [shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
 %{
 currentPrices = zeros(length(sharesListPtf2), 1);
@@ -110,14 +120,17 @@ weightsPtf2 = ones(length(sharesListPtf2),1)/length(sharesListPtf2);
 
 portfolioValuePtf2 = 1;
 [ES_WHS_Ptf2, VaR_WHS_Ptf2] = WHSMeasures(alpha, lambda, weightsPtf2, portfolioValuePtf2, riskMeasureTimeIntervalInDays_Ptf2, returnsSelected2);
-
+fprintf('\n==================================================\n');
+fprintf(' PORTFOLIO 2: WEIGHTED HISTORICAL SIMULATION\n');
+fprintf('==================================================\n');
+fprintf(' VaR (99%%, 1 Day) : %15.6f (Relative)\n', VaR_WHS_Ptf2);
+fprintf(' ES  (99%%, 1 Day) : %15.6f (Relative)\n', ES_WHS_Ptf2);
 %% Gaussian parametric PCA - Ptf3
 sharesListPtf3 = {'AirLiquide';'Allianz';'InBev';'Arcelor';'ASML';'Generali';'AXA';'BBVA';'Santander';'BASF';'Bayer';'BMW';'BNP';'Carrefour';'StGobain';'CRH';'Daimler';'Danone';'DB';'DT';'EON';'ENEL';'ENI';'Essilor';'FT'}; % Extraction of the first 25 Assets
 riskMeasureTimeIntervalInDays_Ptf3 = 10;
 portfolioValuePtf3 = 15e6; % Notional €15 Mln
 
-[tSelected, returnsSelected3] = returnsOfInterest(inputFile, refDate, timeWindow, sharesListPtf3, formatDate);
-
+[tSelected, returnsSelected3] = returnsOfInterest(inputFile, refDate, -timeWindow, sharesListPtf3, formatDate);
 % Calculation of Equally weighted Ptf
 weightsPtf3 = ones(length(sharesListPtf3),1)/length(sharesListPtf3);
 
@@ -144,17 +157,29 @@ for k = 1:length(sharesListPtf3)
         n_1_percent = k; ES_PCA_1_percent = ES_PCA; VaR_PCA_1_percent = VaR_PCA;
     end
 end
-VaR_PCA_1_percent
-fprintf('Min PC for <5%% error: %d\n', n_5_percent);
-fprintf('Min PC for <1%% error: %d\n', n_1_percent);
+fprintf('\n==================================================\n');
+fprintf(' PORTFOLIO 3: GAUSSIAN PARAMETRIC PCA\n');
+fprintf('==================================================\n');
+fprintf(' Full Gaussian VaR (99%%, 10 Days) : %15.2f EUR\n', VaR_full);
+fprintf(' --- Approximation Errors ---\n');
+fprintf(' Min PCs for < 5%% error : %d\n', n_5_percent);
+fprintf(' -> PCA VaR (5%% threshold) : %15.2f EUR\n', VaR_PCA_5_percent);
+fprintf(' -> PCA ES  (5%% threshold) : %15.2f EUR\n', ES_PCA_5_percent);
+fprintf(' Min PCs for < 1%% error : %d\n', n_1_percent);
+fprintf(' -> PCA VaR (1%% threshold) : %15.2f EUR\n', VaR_PCA_1_percent);
+fprintf(' -> PCA ES  (1%% threshold) : %15.2f EUR\n', ES_PCA_1_percent);
+
 %% Plausibility Check
 VaR_plausible_Ptf1 = PlausibilityCheckVaR(alpha, weightsPtf1, portfolioValuePtf1, riskMeasureTimeIntervalInDays_Ptf1, returnsSelected1);
 VaR_plausible_Ptf2 = PlausibilityCheckVaR(alpha, weightsPtf2, portfolioValuePtf2, riskMeasureTimeIntervalInDays_Ptf2, returnsSelected2);
 VaR_plausible_Ptf3 = PlausibilityCheckVaR(alpha, weightsPtf3, portfolioValuePtf3, riskMeasureTimeIntervalInDays_Ptf3, returnsSelected3);
 
-fprintf('Plausibility VaR Ptf1 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf1, VaR_plausible_Ptf1);
-fprintf('Plausibility VaR Ptf2 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf2, VaR_plausible_Ptf2);
-fprintf('Plausibility VaR Ptf3 (99%%, %d Day) : %f Euro\n',riskMeasureTimeIntervalInDays_Ptf3, VaR_plausible_Ptf3);
+fprintf('\n==================================================\n');
+fprintf(' PLAUSIBILITY CHECK\n');
+fprintf('==================================================\n');
+fprintf(' Ptf1 Plausible VaR (99%%,  1 Day) : %15.2f EUR\n', VaR_plausible_Ptf1);
+fprintf(' Ptf2 Plausible VaR (99%%,  1 Day) : %15.6f (Relative)\n', VaR_plausible_Ptf2);
+fprintf(' Ptf3 Plausible VaR (99%%, 10 Days): %15.2f EUR\n', VaR_plausible_Ptf3);
 %% Es2 
 inputFile = 'sx5e_historical_data.xls';
 refDate = datenum('15 Feb 08');   %we start taking values from here
@@ -163,7 +188,7 @@ NumberOfYears=2;
 timeWindow = 12*NumberOfYears;
 shares=cellstr('Generali'); 
 formatDate = 'dd/mm/yyyy';   %modified
-[tSelected, returnsSelected3] = returnsOfInterest(inputFile, refDate, timeWindow, shares, formatDate); %get returns  
+[tSelected, returnsSelected] = returnsOfInterest(inputFile, refDate, timeWindow, shares, formatDate); %get returns  
 costOfShares = 1164000;
 [shareData.num,shareData.cell]=xlsread(inputFile,'Data','a5:cx1295');
 [values_G, dates_G] = findSeries(shareData,underlyingCode('Generali'), formatDate);
@@ -182,5 +207,11 @@ riskMeasureTimeIntervalInDays = 1;
 [dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet);
 idx = find(dates <= valuationDate, 1, 'last');
 rate = zeroRates(idx);
-VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected3); 
-VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected3);
+VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected); 
+VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
+fprintf('\n==================================================\n');
+fprintf(' EXERCISE 2: FULL MONTE CARLO & DELTA NORMAL\n');
+fprintf('==================================================\n');
+fprintf(' Delta Normal VaR     (99%%, 1 Day) : %15.2f EUR\n', VaR_DeltaNormal);
+fprintf(' Full Monte Carlo VaR (99%%, 1 Day) : %15.2f EUR\n', VaR_FullMonteCarlo);
+fprintf('==================================================\n\n');
