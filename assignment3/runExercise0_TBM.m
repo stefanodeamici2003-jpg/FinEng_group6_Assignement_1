@@ -181,7 +181,7 @@ fprintf(' Ptf1 Plausible VaR (99%%,  1 Day) : %15.2f EUR\n', VaR_plausible_Ptf1)
 fprintf(' Ptf2 Plausible VaR (99%%,  1 Day) : %15.6f (Relative)\n', VaR_plausible_Ptf2);
 fprintf(' Ptf3 Plausible VaR (99%%, 10 Days): %15.2f EUR\n', VaR_plausible_Ptf3);
 %% Es2 
-valuationDate = datenum('15 Feb 10');  
+valuationDate = datenum('15 Feb 2010');  
 NumberOfYears=-2;
 timeWindow = 12*NumberOfYears;
 shares=cellstr('Generali'); 
@@ -190,11 +190,11 @@ formatDate = 'dd/mm/yyyy';   %modified
 costOfShares = 1164000;
 [shareData.num,shareData.cell]=xlsread(inputFile,'Data','a5:cx1295');
 [values_G, dates_G] = findSeries(shareData,underlyingCode('Generali'), formatDate);
-idx = find(dates_G <= valuationDate, 1, 'last');
-stockPrice = values_G(idx);
+idx = find(dates_G <= valuationDate, 1, 'last')
+stockPrice = values_G(idx)
 numberOfShares = costOfShares / stockPrice;
 numberOfPuts = numberOfShares;
-expiry = datenum('18 Apr 10');
+expiry = datenum('18 Apr 2010');
 strike = 28.5;
 volatility = 0.223;   %yearly
 dividendYield = 0.051;    %yearly
@@ -203,8 +203,7 @@ TTMinYears = (expiry - valuationDate) / 365;
 riskMeasureTimeIntervalInDays = 1;
 [datesSet, ratesSet] = readExcelData('MktData_CurveBootstrap.xls', formatDate);
 [dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet);
-idx = find(dates <= valuationDate, 1, 'last');
-rate = zeroRates(idx);
+rate = interp1(dates, zeroRates, valuationDate);
 VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected); 
 VaR_DeltaNormal = DeltaNormalVaRV2(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
 VaR_DeltaGammaNormal = DeltaGammaNormalVaRV2(alpha, numberOfShares, numberOfPuts,stockPrice, strike, rate, dividendYield, volatility, TTMinYears,riskMeasureTimeIntervalInDays, returnsSelected);
