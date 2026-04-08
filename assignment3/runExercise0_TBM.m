@@ -1,9 +1,7 @@
-clc;
-clear all;
+clc; clear all;
 %% Exercise 1
 %% Parameters
 inputFile = 'sx5e_historical_data.xls'; formatDate = 'dd/mm/yyyy'; alpha = 0.95; refDate = datenum('24 Jul 12');
-
 % Load data ONCE to save time and lines
 [shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
 [datesSet, ratesSet] = readExcelData('MktData_CurveBootstrap.xls', formatDate);
@@ -47,7 +45,6 @@ ES_BS_Ptf1 = mean(boot_ES_array);
 %% Weighted Historical Simulation - Ptf2
 sharesListPtf2 = {'Vivendi'; 'AXA'; 'ENEL'; 'Volkswagen'; 'Schneider'}; 
 lambda = 0.98; riskMeasureTimeIntervalInDays_Ptf2 = 1;
-
 % Extraction of today's prices
 [tSelected, returnsSelected2] = returnsOfInterest(inputFile, refDate, -timeWindow, sharesListPtf2, formatDate);
 [shareData.num, shareData.cell] = xlsread(inputFile, 'Data', 'a5:cx1295');
@@ -85,25 +82,18 @@ VaR_plausible_Ptf1 = PlausibilityCheckVaR(alpha, weightsPtf1, portfolioValuePtf1
 VaR_plausible_Ptf2 = PlausibilityCheckVaR(alpha, weightsPtf2, portfolioValuePtf2, riskMeasureTimeIntervalInDays_Ptf2, returnsSelected2);
 VaR_plausible_Ptf3 = PlausibilityCheckVaR(alpha, weightsPtf3, portfolioValuePtf3, riskMeasureTimeIntervalInDays_Ptf3, returnsSelected3);
 %% Exercise 2 
-valuationDate = datenum('15 Feb 2010');  NumberOfYears = -2; timeWindow = 12 * NumberOfYears;
+valuationDate = datenum('15 Feb 2010'); 
 shares = cellstr('Generali'); 
-
-[tSelected, returnsSelected] = returnsOfInterest(inputFile, valuationDate, timeWindow, shares, formatDate);
+[tSelected, returnsSelected] = returnsOfInterest(inputFile, valuationDate, -timeWindow, shares, formatDate);
 costOfShares = 1164000;
-
 % Retrieve stock price using the getLatestPrice helper function
-stockPrice = getLatestPrice(shareData, underlyingCode('Generali'), formatDate, valuationDate);
-
-numberOfShares = costOfShares / stockPrice;
-numberOfPuts = numberOfShares;
-
+stockPrice = getLatestPrice(shareData, underlyingCode('Generali'), formatDate, valuationDate); 
+numberOfShares = costOfShares / stockPrice; numberOfPuts = numberOfShares;
 expiry = datenum('18 Apr 2010');
-strike = 28.5; volatility = 0.223; dividendYield = 0.051; alpha = 0.99;
+strike = 28.5; volatility = 0.223; dividendYield = 0.051; alpha = 0.99; riskMeasureTimeIntervalInDays = 1;
 TTMinYears = (expiry - valuationDate) / 365;
-riskMeasureTimeIntervalInDays = 1;
 
-% Rate is interpolated using the curves loaded at the beginning
-rate = interp1(dates, zeroRates, valuationDate);
+rate = interp1(dates, zeroRates, valuationDate); % Rate is interpolated using the curves loaded at the beginning
 
 VaR_FullMonteCarlo = FullMonteCarloVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected); 
 VaR_DeltaNormal = DeltaNormalVaR(alpha, numberOfShares, numberOfPuts, stockPrice, strike, rate, dividendYield, volatility, TTMinYears, riskMeasureTimeIntervalInDays, returnsSelected);
@@ -112,7 +102,6 @@ VaR_DeltaGammaNormal = DeltaGammaNormalVaR(alpha, numberOfShares, numberOfPuts, 
 S0 = 1; sigma = 0.19; N_period = 5; Notional = 45e6; t = yearfrac(dates(1), dates, 3); r = interp1(t, zeroRates, 1.0);
 
 V_rf = price_cliquet(S0, sigma, r, N_period, Notional);
-
 defaultProb = 0.02; recovery = 0.40;
 CVA = defaultProb * (1 - recovery) * V_rf;
 V_adj = V_rf - CVA;
@@ -126,9 +115,7 @@ fprintf('\n==================================================\n EXERCISE 2: FULL
 fprintf('\n==================================================\n EXERCISE 3: COUNTERPARTY RISK\n==================================================\n Fair Value (Risk-Free) : %15.0f EUR\n CVA-Adjusted Value     : %15.0f EUR\n\n', V_rf, V_adj);
 %% Exercise 4
 %% Parameters
-p   = 0.05;   % default probability
-rho = 0.40;   % correlation
-R   = 0.20;   % recovery
+p   = 0.05;  rho = 0.40; R   = 0.20;   % default probability, correlation, recovery
 LGD = 1 - R;
 %% Common factor Y grid
 c    = norminv(p); y    = linspace(-6, 6, 2000); dy   = y(2) - y(1);
@@ -139,9 +126,7 @@ KL_div = @(z, p) z.*log(z./p) + (1-z).*log((1-z)./(1-p));
 I_exact  = [10, 20, 30, 50, 75, 100, 150, 200, 400, 600, 1000, 2000, 5000];
 I_kl     = unique(round(logspace(1, log10(2e4), 80)));
 %% a) mezzanine tranche
-Kd  = 0.05;   % attachment point
-Ku  = 0.09;   % detachment point
-
+Kd  = 0.05;   Ku  = 0.09; % attachment and detachment point
 % Call external function for Mezzanine calculations
 [price_LHP, price_exact, price_kl] = computeTranchePrices(Kd, Ku, LGD, c, rho, pY, phiY, dy, y, I_exact, I_kl, KL_div);
 
@@ -150,19 +135,9 @@ for idx = 1:length(I_exact)
     fprintf('I = %5d,  price = %.4f%%\n', I_exact(idx), price_exact(idx));
 end
 %% Plot 
-figure;
-semilogx(I_kl,    price_kl,    'b-',  'LineWidth', 2); hold on;
-semilogx(I_exact, price_exact, 'ro',  'MarkerSize', 6, 'LineWidth', 1.5);
-yline(price_LHP,               'k--', 'LineWidth', 2);
-xlabel('Number of obligors I (log scale)'); ylabel('Tranche Price (% of face value)');
-title('Mezzanine Tranche Price vs. I — Vasicek Model');
-legend('KL Approximation', 'Exact Solution', 'LHP Limit', 'Location', 'southeast');
-grid on;
-xlim([10, 2e4]);
-
+plotTranchePrice(I_kl, price_kl, I_exact, price_exact, price_LHP, 'mezzanine');
 %% b) equity tranche
 Kd_eq = 0.00; Ku_eq = 0.05;
-
 % Call external function for Equity calculations
 [price_LHP_eq, price_exact_eq, price_kl_eq] = computeTranchePrices(Kd_eq, Ku_eq, LGD, c, rho, pY, phiY, dy, y, I_exact, I_kl, KL_div);
 
@@ -171,13 +146,4 @@ for idx = 1:length(I_exact)
     fprintf('I = %5d,  equity price = %.4f%%\n', I_exact(idx), price_exact_eq(idx));
 end
 %% Plot - equity
-figure;
-semilogx(I_kl,    price_kl_eq,  'b-',  'LineWidth', 2); hold on;
-% semilogx(I_kl,    price_kl_imp, 'm-',  'LineWidth', 2);
-semilogx(I_exact, price_exact_eq,'ro', 'MarkerSize', 6, 'LineWidth', 1.5);
-yline(price_LHP_eq, 'k--', 'LineWidth', 2);
-xlabel('Number of obligors I (log scale)'); ylabel('Tranche Price (% of face value)');
-title('Equity Tranche Price vs. I — Vasicek Model');
-legend('KL Approximation', 'Exact Solution', 'LHP Limit');
-grid on;
-xlim([10, 2e4]);
+plotTranchePrice(I_kl, price_kl_eq, I_exact, price_exact_eq, price_LHP_eq, 'equity')
