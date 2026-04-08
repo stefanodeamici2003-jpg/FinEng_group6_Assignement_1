@@ -45,20 +45,36 @@ valuesSelectedShares=zeros(idxStart-idxEnd+1,elementsBasket);
 
 for i=1:elementsBasket
     
-    bbgCode= underlyingCode(sharesList(i,:));
-    %Select the shares of interest
-    [values_share, t_share]=findSeries(shareData, bbgCode, formatDate);
-    [val_time, offset] = closestDate(endDate, t_share);    
+    bbgCode = underlyingCode(sharesList(i,:));
     
-    for d = 0:length(tSelected) - 1
-        if t_share(offset + d) > tSelected(d+1)
-            t_share = [t_share(1:offset + d-1); tSelected(d+1); t_share(offset + d:end)];
-            values_share = [values_share(1:offset + d-1); values_share(offset + d-1); values_share(offset + d:end)];
+    % Select the shares of interest
+    [values_share, t_share] = findSeries(shareData, bbgCode, formatDate);
+    
+    % Trovo l'offset di partenza esatto (l'ultimo giorno <= alla prima data)
+    [~, offset] = closestDate(tSelected(1), t_share);
+    
+    % Inizializzo il "puntatore" del titolo
+    if isempty(offset) || offset == 0
+        idx_stock = 1; % Rete di sicurezza
+    else
+        idx_stock = offset;
+    end
+    
+    % Ciclo sulle date che mi interessano (da 1 a length)
+    for d = 1:length(tSelected)
+        
+        % Faccio avanzare il puntatore SOLO SE la data successiva del titolo 
+        % esiste e non supera la data del calendario di riferimento
+        while (idx_stock < length(t_share)) && (t_share(idx_stock + 1) <= tSelected(d))
+            idx_stock = idx_stock + 1;
         end
         
+        % Prendo il valore a cui è fermo il puntatore
+        valuesSelectedShares(d, i) = values_share(idx_stock);
+        
     end
-    valuesSelectedShares(:, i) = values_share(offset:offset+length(tSelected) - 1);
 end
+valuesSelectedShares
 returnsSelected=log(valuesSelectedShares(2:end,:)./valuesSelectedShares(1:end-1,:));
 tSelected = tSelected(2:end);
 
