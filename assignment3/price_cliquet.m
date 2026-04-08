@@ -1,5 +1,6 @@
 function V = price_cliquet(S0, sigma, r, N, Notional)
-% price_cliquet computes the price of a cliquet option assuming no credit
+% price_cliquet computes the price of a cliquet option assuming no
+% counterparty
 % risk
 % INPUTS:
 %   S0       - spot price
