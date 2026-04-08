@@ -190,8 +190,8 @@ formatDate = 'dd/mm/yyyy';   %modified
 costOfShares = 1164000;
 [shareData.num,shareData.cell]=xlsread(inputFile,'Data','a5:cx1295');
 [values_G, dates_G] = findSeries(shareData,underlyingCode('Generali'), formatDate);
-idx = find(dates_G <= valuationDate, 1, 'last')
-stockPrice = values_G(idx)
+idx = find(dates_G <= valuationDate, 1, 'last');
+stockPrice = values_G(idx);
 numberOfShares = costOfShares / stockPrice;
 numberOfPuts = numberOfShares;
 expiry = datenum('18 Apr 2010');
