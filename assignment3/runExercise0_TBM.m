@@ -148,11 +148,11 @@ VaR_PCA_5_percent = 0; VaR_PCA_1_percent = 0;
 for k = 1:length(sharesListPtf3)
     [ES_PCA, VaR_PCA] = PCAMeasures(alpha, k, weightsPtf3, portfolioValuePtf3, riskMeasureTimeIntervalInDays_Ptf3, returnsSelected3);
     error_pca = (VaR_full - VaR_PCA) / VaR_full;
-    
+
     if error_pca <= 0.05 && n_5_percent == 0
         n_5_percent = k; ES_PCA_5_percent = ES_PCA; VaR_PCA_5_percent = VaR_PCA;
     end
-    
+
     if error_pca <= 0.01 && n_1_percent == 0
         n_1_percent = k; ES_PCA_1_percent = ES_PCA; VaR_PCA_1_percent = VaR_PCA;
     end
@@ -180,7 +180,11 @@ fprintf('==================================================\n');
 fprintf(' Ptf1 Plausible VaR (99%%,  1 Day) : %15.2f EUR\n', VaR_plausible_Ptf1);
 fprintf(' Ptf2 Plausible VaR (99%%,  1 Day) : %15.6f (Relative)\n', VaR_plausible_Ptf2);
 fprintf(' Ptf3 Plausible VaR (99%%, 10 Days): %15.2f EUR\n', VaR_plausible_Ptf3);
-%% Es2 
+
+
+%% Exercise 2 
+
+
 valuationDate = datenum('15 Feb 2010');  
 NumberOfYears=-2;
 timeWindow = 12*NumberOfYears;
@@ -215,7 +219,34 @@ fprintf(' Delta Normal VaR       (99%%, 1 Day) : %15.4f EUR\n', VaR_DeltaNormal)
 fprintf(' Delta Gamma Normal VaR (99%%, 1 Day) : %15.4f EUR\n', VaR_DeltaGammaNormal);
 fprintf('==================================================\n\n');
 
-%% Exercise 4 :MBS pricing
+%% Exercise 3: Pricing in presence of counterparty risk
+
+formatDate = 'dd/mm/yyyy';
+[datesSet, ratesSet] = readExcelData('MktData_CurveBootstrap.xls', formatDate);
+[dates, discounts, zeroRates]=bootstrap(datesSet, ratesSet);
+% parameters
+S0 = 1;
+sigma = 0.19;
+t = yearfrac(dates(1), dates, 3); % 3 = ACT/365 
+r = interp1(t, zeroRates, 1.0);
+N_period = 5;
+Notional = 45e6;
+
+% no counterparty risk assumption
+V_rf = price_cliquet(S0, sigma, r, N_period, Notional);
+fprintf('Fair Value (risk-free) = EUR %.0f\n', V_rf);
+
+% a simple approx for CVA
+defaultProb = 0.02; % on 5 years
+recovery    = 0.40;
+
+CVA = defaultProb * (1 - recovery) * V_rf;
+
+V_adj = V_rf - CVA;
+
+fprintf('CVA-adjusted Value = EUR %.0f\n', V_adj);
+
+%% Exercise 4: MBS pricing
 
 %% a) mezzanine tranche
 %% Parameters
