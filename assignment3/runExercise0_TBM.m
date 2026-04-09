@@ -14,7 +14,7 @@ sharesList = {'Inditex'; 'BASF'; 'LVMH'};
 portfolioValue = 1e7; riskMeasureTimeIntervalInDays = 1; numberAssets = size(sharesList,1);
 weights = (1/numberAssets) * ones(numberAssets,1);
 try
-    [ES_PCA, VaR] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returnsSelected); 
+    [ES_analytic, VaR_analytic] = AnalyticNormalMeasures(alpha, weights, portfolioValue, riskMeasureTimeIntervalInDays, returnsSelected); 
 catch err
     err.message
 end
@@ -106,7 +106,7 @@ defaultProb = 0.02; recovery = 0.40;
 CVA = defaultProb * (1 - recovery) * V_rf;
 V_adj = V_rf - CVA;
 %% CONSOLIDATED PRINTS (EXERCISES 1, 2, 3)
-fprintf('\n==================================================\n EXERCISE 0: ANALYTIC NORMAL MEASURES\n==================================================\n VaR (95%%, 1 Day) : %15.2f EUR\n ES  (95%%, 1 Day) : %15.2f EUR\n', VaR, ES_PCA);
+fprintf('\n==================================================\n EXERCISE 0: ANALYTIC NORMAL MEASURES\n==================================================\n VaR (95%%, 1 Day) : %15.2f EUR\n ES  (95%%, 1 Day) : %15.2f EUR\n', VaR_analytic, ES_analytic);
 fprintf('\n==================================================\n PORTFOLIO 1: HISTORICAL SIMULATION & BOOTSTRAP\n==================================================\n --- Historical Simulation ---\n VaR (99%%, 1 Day) : %15.2f EUR\n ES  (99%%, 1 Day) : %15.2f EUR\n --- Bootstrap (200 Simulations) ---\n VaR (99%%, 1 Day) : %15.2f EUR\n ES  (99%%, 1 Day) : %15.2f EUR\n', VaR_HS_Ptf1, ES_HS_Ptf1, VaR_BS_Ptf1, ES_BS_Ptf1);
 fprintf('\n==================================================\n PORTFOLIO 2: WEIGHTED HISTORICAL SIMULATION\n==================================================\n VaR (99%%, 1 Day) : %15.6f (Relative)\n ES  (99%%, 1 Day) : %15.6f (Relative)\n', VaR_WHS_Ptf2, ES_WHS_Ptf2);
 fprintf('\n==================================================\n PORTFOLIO 3: GAUSSIAN PARAMETRIC PCA\n==================================================\n Full Gaussian VaR (99%%, 10 Days) : %15.2f EUR\n --- Approximation Errors ---\n Min PCs for < 5%% error : %d\n -> PCA VaR (5%% threshold) : %15.2f EUR\n -> PCA ES  (5%% threshold) : %15.2f EUR\n Min PCs for < 1%% error : %d\n -> PCA VaR (1%% threshold) : %15.2f EUR\n -> PCA ES  (1%% threshold) : %15.2f EUR\n', VaR_full, n_5_percent, VaR_PCA_5_percent, ES_PCA_5_percent, n_1_percent, VaR_PCA_1_percent, ES_PCA_1_percent);
